@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: opentaiji
+  namespace: opentaiji
+  labels:
+    app.kubernetes.io/name: opentaiji
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentaiji
+      app.kubernetes.io/component: api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

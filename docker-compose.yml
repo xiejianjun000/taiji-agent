@@ -1,0 +1,181 @@
+# OpenTaiji 生产级 Docker Compose 配置
+# 包含完整的服务栈：应用、监控、日志
+
+version: '3.8'
+
+services:
+  opentaiji:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    image: opentaiji/opentaiji:1.1.0
+    container_name: opentaiji-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - METRICS_ENABLED=true
+      - PROMETHEUS_PORT=9090
+    env_file:
+      - .env.production
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - opentaiji-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        labels: "service_name,environment"
+        env: "OS_VERSION,HOSTNAME"
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: opentaiji-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - opentaiji-network
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: opentaiji-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - opentaiji-network
+
+  # Loki 日志聚合
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: opentaiji-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - opentaiji-network
+
+  # Promtail 日志收集
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: opentaiji-promtail
+    restart: unless-stopped
+    volumes:
+      - ./logs:/var/log/opentaiji:ro
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - opentaiji-network
+
+  # Jaeger 分布式追踪
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: opentaiji-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - opentaiji-network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: opentaiji-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - opentaiji-network
+
+  # Nginx 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: opentaiji-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - opentaiji
+    networks:
+      - opentaiji-network
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  redis-data:
+
+networks:
+  opentaiji-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

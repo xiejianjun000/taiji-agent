@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opentaiji
+  namespace: opentaiji
+  labels:
+    app.kubernetes.io/name: opentaiji
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: opentaiji
+      app.kubernetes.io/component: api

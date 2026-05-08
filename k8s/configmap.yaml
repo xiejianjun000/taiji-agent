@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opentaiji-config
+  namespace: opentaiji
+  labels:
+    app.kubernetes.io/name: opentaiji
+data:
+  # 应用配置
+  APP_NAME: "OpenTaiji"
+  APP_VERSION: "1.1.0"
+  
+  # 日志配置
+  LOG_FORMAT: "json"
+  LOG_LEVEL: "info"
+  
+  # 性能配置
+  MAX_WORKERS: "4"
+  TASK_QUEUE_SIZE: "1000"
+  REQUEST_TIMEOUT: "30000"
+  
+  # 功能开关
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  HEALTH_CHECK_ENABLED: "true"
+  
+  # WFGY 反幻觉系统配置
+  WFGY_ENABLED: "true"
+  WFGY_VERIFICATION_LEVEL: "strict"
+  
+  # Actor Runtime 配置
+  ACTOR_MAILBOX_SIZE: "100"
+  ACTOR_SUPERVISION_STRATEGY: "restart"
+  
+  # 缓存配置
+  CACHE_ENABLED: "true"
+  CACHE_TTL: "3600"
+  
+  # 限流配置
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "1000"
