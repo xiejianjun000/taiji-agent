@@ -5,8 +5,7 @@ import {
   LLMRequestOptions,
   LLMResponse,
   LLMStreamChunk,
-  LLMBaseError,
-  APIResponse
+  LLMBaseError
 } from './interfaces/ILLMAdapter';
 import { Logger } from '../../utils/logger';
 
@@ -26,16 +25,26 @@ export const DEEPSEEK_V4_MODELS = {
 
 /**
  * DeepSeek API响应扩展（包含推理内容）
+ * 不再继承 APIResponse，避免 choices 类型不兼容
  */
-interface DeepSeekAPIResponse extends APIResponse {
-  choices?: Array<{
+interface DeepSeekAPIResponse {
+  id?: string;
+  object?: string;
+  created?: number;
+  model: string;
+  choices: Array<{
     index: number;
-    message: {
+    message?: {
       role: string;
       content: string;
       reasoning_content?: string;
     };
-    finish_reason: string;
+    delta?: {
+      role?: string;
+      content?: string;
+      reasoning_content?: string;
+    };
+    finish_reason?: string;
   }>;
   usage?: {
     prompt_tokens: number;
@@ -44,6 +53,11 @@ interface DeepSeekAPIResponse extends APIResponse {
     completion_tokens_details?: {
       reasoning_tokens: number;
     };
+  };
+  error?: {
+    message: string;
+    type?: string;
+    code?: string;
   };
 }
 
@@ -69,10 +83,11 @@ export class DeepSeekAdapter extends BaseLLMAdapter {
   initialize(config: LLMConfig): void {
     const mergedConfig: LLMConfig = {
       baseUrl: 'https://api.deepseek.com/v1',
-      model: DEEPSEEK_V4_MODELS.V4_PRO, // 默认使用V4 Pro
       costPer1kPrompt: 0.001,  // ¥1/百万tokens
       costPer1kCompletion: 0.002, // ¥2/百万tokens
-      ...config
+      ...config,
+      // 确保 model 有默认值（如果 config 中未提供）
+      model: config.model || DEEPSEEK_V4_MODELS.V4_PRO,
     };
     super.initialize(mergedConfig);
     this.logger.info('DeepSeek适配器初始化完成', { 
@@ -176,6 +191,35 @@ export class DeepSeekAdapter extends BaseLLMAdapter {
   }
 
   /**
+   * 确保适配器已初始化
+   */
+  protected ensureReady(): void {
+    if (!this.isReady()) {
+      throw new LLMBaseError('DeepSeekAdapter not initialized. Call initialize() first.');
+    }
+  }
+
+  /**
+   * 构建请求体
+   */
+  protected buildRequestBody(
+    messages: LLMMessage[],
+    options?: Partial<LLMRequestOptions>
+  ): Record<string, unknown> {
+    return {
+      model: options?.model ?? this._config.model,
+      messages,
+      temperature: options?.temperature,
+      max_tokens: options?.maxTokens,
+      top_p: options?.topP,
+      stop: options?.stop,
+      stream: options?.stream ?? false,
+      frequency_penalty: options?.frequencyPenalty,
+      presence_penalty: options?.presencePenalty,
+    };
+  }
+
+  /**
    * 解析DeepSeek响应（包含推理内容）
    */
   private parseDeepSeekResponse(data: DeepSeekAPIResponse, startTime: number): LLMResponse {
@@ -191,24 +235,27 @@ export class DeepSeekAdapter extends BaseLLMAdapter {
     };
 
     const reasoningTokens = usage.completion_tokens_details?.reasoning_tokens || 0;
+    const content = choice.message?.content || '';
 
     return {
-      id: data.id || `deepseek-${Date.now()}`,
+      content,
       model: data.model || this._config.model,
-      message: {
-        role: 'assistant',
-        content: choice.message.content,
-        reasoningContent: choice.message.reasoning_content
-      },
-      finishReason: this.mapFinishReason(choice.finish_reason),
+      finishReason: this.mapFinishReason(choice.finish_reason || 'stop'),
       usage: {
         promptTokens: usage.prompt_tokens,
         completionTokens: usage.completion_tokens,
         totalTokens: usage.total_tokens,
         reasoningTokens
       },
+      latencyMs: Date.now() - startTime,
+      id: data.id || `deepseek-${Date.now()}`,
+      message: choice.message ? {
+        role: choice.message.role,
+        content: choice.message.content,
+        reasoningContent: choice.message.reasoning_content
+      } : undefined,
       created: data.created || Math.floor(Date.now() / 1000),
-      responseMs: Date.now() - startTime
+      rawResponse: data
     };
   }
 
@@ -219,14 +266,20 @@ export class DeepSeekAdapter extends BaseLLMAdapter {
     const choice = data.choices?.[0];
     if (!choice) return null;
 
+    const content = choice.delta?.content || '';
+    const finishReason = choice.finish_reason ? this.mapFinishReason(choice.finish_reason) : undefined;
+
     return {
+      content,
+      finishReason,
+      isFirst: false, // 流式 chunk 的 isFirst 由调用方判断
+      isLast: finishReason === 'stop',
       id: data.id,
       delta: {
         role: choice.delta?.role,
         content: choice.delta?.content || '',
         reasoningContent: choice.delta?.reasoning_content
-      },
-      finishReason: choice.finish_reason ? this.mapFinishReason(choice.finish_reason) : undefined
+      }
     };
   }
 

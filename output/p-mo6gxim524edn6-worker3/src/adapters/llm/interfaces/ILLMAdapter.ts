@@ -15,6 +15,8 @@ export interface LLMTokenUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  /** DeepSeek 推理 token 数 */
+  reasoningTokens?: number;
 }
 
 export interface LLMResponse {
@@ -24,6 +26,16 @@ export interface LLMResponse {
   latencyMs: number;
   finishReason?: string;
   rawResponse?: unknown;
+  /** 响应 ID */
+  id?: string;
+  /** 原始 message 对象（DeepSeek 等需要保留 reasoning_content） */
+  message?: {
+    role: string;
+    content: string;
+    reasoningContent?: string;
+  };
+  /** 创建时间戳 */
+  created?: number;
 }
 
 export interface LLMStreamChunk {
@@ -31,6 +43,14 @@ export interface LLMStreamChunk {
   finishReason?: string;
   isFirst: boolean;
   isLast: boolean;
+  /** chunk ID */
+  id?: string;
+  /** delta 对象（流式响应） */
+  delta?: {
+    role?: string;
+    content?: string;
+    reasoningContent?: string;
+  };
 }
 
 export interface LLMRequestOptions {
