@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+output/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Next.js
+.next/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test
+*.test.ts
+*.spec.ts
+
+# JSON (keep package.json formatted)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Minified
+*.min.js
+*.min.css
