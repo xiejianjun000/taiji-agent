@@ -1,7 +1,7 @@
 {
   "name": "opentaiji",
   "version": "1.1.1",
-  "description": "OpenTaiji - 开源 AI 任务调度与确定性验证系统",
+  "description": "OpenTaiji - 开源 AI 任嚡调度与确定性验证系统",
   "private": true,
   "author": "OpenTaiji Team",
   "license": "MIT",
@@ -47,17 +47,20 @@
   "scripts": {
     "postinstall": "echo '✅ OpenTaiji 项目初始化完成'",
     "dev": "cd output/p-mo6gxim524edn6-worker3 && npm run dev",
-    "build": "echo 'Build completed successfully'",
-    "test": "echo 'Tests passed'",
+    "build": "cd output/p-mo6gxim524edn6-worker3 && npm run build",
+    "test": "cd output/p-mo6gxim524edn6-worker3 && npm run test",
     "test:unit": "cd output/p-mo6gxim524edn6-worker3 && npm run test:unit",
     "test:performance": "cd output/p-mo6gxim524edn6-worker3 && npm run test:performance",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "test:coverage": "cd output/p-mo6gxim524edn6-worker3 && npm run test:coverage",
+    "lint": "cd output/p-mo6gxim524edn6-worker3 && npm run lint",
+    "lint:fix": "cd output/p-mo6gxim524edn6-worker3 && npm run lint:fix",
+    "type-check": "cd output/p-mo6gxim524edn6-worker3 && npx tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\"",
     "docs:update": "cd output/p-mo6gxim524edn6-worker3 && npm run docs:update",
     "clean": "cd output/p-mo6gxim524edn6-worker3 && npm run clean",
     "prepare": "echo '✅ Pre-commit hooks ready'",
-    "test:watch": "jest --watch"
+    "test:watch": "cd output/p-mo6gxim524edn6-worker3 && npm run test:watch"
   },
   "dependencies": {
     "agent-browser": "^0.15.0",
@@ -73,10 +76,12 @@
   ],
   "devDependencies": {
     "@types/jest": "^29.5.12",
+    "@types/node": "^20.0.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
   }
 }
