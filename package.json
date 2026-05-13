@@ -1,7 +1,7 @@
 {
   "name": "opentaiji",
   "version": "1.1.1",
-  "description": "OpenTaiji - 开源 AI 任嚡调度与确定性验证系统",
+  "description": "OpenTaiji - \u5f00\u6e90 AI \u4efb\u56a1\u8c03\u5ea6\u4e0e\u786e\u5b9a\u6027\u9a8c\u8bc1\u7cfb\u7edf",
   "private": true,
   "author": "OpenTaiji Team",
   "license": "MIT",
@@ -45,7 +45,7 @@
     "arm64"
   ],
   "scripts": {
-    "postinstall": "echo '✅ OpenTaiji 项目初始化完成'",
+    "postinstall": "echo '\u2705 OpenTaiji \u9879\u76ee\u521d\u59cb\u5316\u5b8c\u6210'",
     "dev": "cd output/p-mo6gxim524edn6-worker3 && npm run dev",
     "build": "cd output/p-mo6gxim524edn6-worker3 && npm run build",
     "test": "cd output/p-mo6gxim524edn6-worker3 && npm run test",
@@ -59,16 +59,12 @@
     "format:check": "prettier --check \"**/*.{ts,js,json,md,yml,yaml}\"",
     "docs:update": "cd output/p-mo6gxim524edn6-worker3 && npm run docs:update",
     "clean": "cd output/p-mo6gxim524edn6-worker3 && npm run clean",
-    "prepare": "echo '✅ Pre-commit hooks ready'",
+    "prepare": "echo '\u2705 Pre-commit hooks ready'",
     "test:watch": "cd output/p-mo6gxim524edn6-worker3 && npm run test:watch"
   },
   "dependencies": {
     "agent-browser": "^0.27.0",
     "@askjo/camofox-browser": "^1.7.0"
-  },
-  "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=9.0.0"
   },
   "workspaces": [
     "output/p-mo6gxim524edn6-worker3",
@@ -79,9 +75,9 @@
     "@types/node": "^25.7.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.2",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
     "prettier": "^3.2.5"
   }
 }
