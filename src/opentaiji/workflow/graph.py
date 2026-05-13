@@ -2,13 +2,14 @@
 Workflow Graph - 工作流图结构
 支持节点、边、条件边的声明式定义
 """
+
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, TypeVar
-from enum import Enum
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,8 @@ class NodeType(str, Enum):
 class Node:
     name: str
     node_type: NodeType
-    handler: Optional[Callable] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    handler: Callable | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.metadata is None:
@@ -40,14 +41,14 @@ class Node:
 class Edge:
     source: str
     target: str
-    condition: Optional[Callable[[Any], bool]] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    condition: Callable[[Any], bool] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ConditionalEdge:
     source: str
-    routes: Dict[str, str]
+    routes: dict[str, str]
     default: str
     router_func: Callable[[Any], str]
 
@@ -55,29 +56,29 @@ class ConditionalEdge:
 @dataclass
 class StateReducer:
     field_name: str
-    reducer_func: Callable[[List[Any]], Any]
+    reducer_func: Callable[[list[Any]], Any]
 
-    def reduce(self, values: List[Any]) -> Any:
+    def reduce(self, values: list[Any]) -> Any:
         return self.reducer_func(values)
 
 
 class WorkflowGraph:
     def __init__(self, name: str = "workflow"):
         self.name = name
-        self._nodes: Dict[str, Node] = {}
-        self._edges: List[Edge] = []
-        self._conditional_edges: Dict[str, ConditionalEdge] = {}
-        self._reducers: Dict[str, StateReducer] = {}
-        self._entry_point: Optional[str] = None
-        self._end_nodes: List[str] = []
+        self._nodes: dict[str, Node] = {}
+        self._edges: list[Edge] = []
+        self._conditional_edges: dict[str, ConditionalEdge] = {}
+        self._reducers: dict[str, StateReducer] = {}
+        self._entry_point: str | None = None
+        self._end_nodes: list[str] = []
 
     def add_node(
         self,
         name: str,
         node_type: NodeType = NodeType.AGENT,
-        handler: Optional[Callable] = None,
+        handler: Callable | None = None,
         **metadata,
-    ) -> "WorkflowGraph":
+    ) -> WorkflowGraph:
         node = Node(
             name=name,
             node_type=node_type,
@@ -91,8 +92,8 @@ class WorkflowGraph:
         self,
         source: str,
         target: str,
-        condition: Optional[Callable[[Any], bool]] = None,
-    ) -> "WorkflowGraph":
+        condition: Callable[[Any], bool] | None = None,
+    ) -> WorkflowGraph:
         if source not in self._nodes:
             raise ValueError(f"Node not found: {source}")
         if target not in self._nodes:
@@ -104,9 +105,9 @@ class WorkflowGraph:
     def add_conditional_edge(
         self,
         source: str,
-        routes: Dict[str, str],
-        default: Optional[str] = None,
-    ) -> "WorkflowGraph":
+        routes: dict[str, str],
+        default: str | None = None,
+    ) -> WorkflowGraph:
         if source not in self._nodes:
             raise ValueError(f"Node not found: {source}")
         for target in routes.values():
@@ -130,32 +131,29 @@ class WorkflowGraph:
         )
         return self
 
-    def set_entry_point(self, node_name: str) -> "WorkflowGraph":
+    def set_entry_point(self, node_name: str) -> WorkflowGraph:
         if node_name not in self._nodes:
             raise ValueError(f"Node not found: {node_name}")
         self._entry_point = node_name
         return self
 
-    def set_end_nodes(self, *node_names: str) -> "WorkflowGraph":
+    def set_end_nodes(self, *node_names: str) -> WorkflowGraph:
         for name in node_names:
             if name not in self._nodes:
                 raise ValueError(f"Node not found: {name}")
         self._end_nodes = list(node_names)
         return self
 
-    def add_reducer(self, field_name: str, reducer_func: Callable) -> "WorkflowGraph":
+    def add_reducer(self, field_name: str, reducer_func: Callable) -> WorkflowGraph:
         self._reducers[field_name] = StateReducer(field_name, reducer_func)
         return self
 
-    def compile(self) -> Dict[str, Any]:
+    def compile(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "nodes": {name: node.node_type.value for name, node in self._nodes.items()},
             "edges": [{"source": e.source, "target": e.target} for e in self._edges],
-            "conditional_edges": {
-                source: ce.routes
-                for source, ce in self._conditional_edges.items()
-            },
+            "conditional_edges": {source: ce.routes for source, ce in self._conditional_edges.items()},
             "entry_point": self._entry_point,
             "end_nodes": self._end_nodes,
             "reducers": list(self._reducers.keys()),

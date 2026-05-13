@@ -2,16 +2,21 @@
 Soul 人格系统 - 基于 cgast/harness
 """
 
-import yaml
-from typing import Optional
-from pathlib import Path
-from pydantic import BaseModel
 from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import yaml
+from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    pass
 
 
 @dataclass
 class SoulLayer:
     """Soul 分层结构"""
+
     boundaries: list[str]
     ethics: list[str]
     character_traits: list[str]
@@ -22,6 +27,7 @@ class SoulLayer:
 
 class Soul(BaseModel):
     """Soul 文档"""
+
     id: str
     name: str
     version: int = 1
@@ -36,23 +42,23 @@ class Soul(BaseModel):
 class SoulLoader:
     """
     Soul 加载器
-    
+
     从 YAML 文件加载人格定义
     """
-    
-    def __init__(self, souls_dir: Optional[Path] = None):
+
+    def __init__(self, souls_dir: Path | None = None):
         if souls_dir is None:
             self.souls_dir = Path.home() / ".opentaiji" / "souls"
         else:
             self.souls_dir = Path(souls_dir)
-        
+
         self._cache: dict[str, Soul] = {}
         self._ensure_default_souls()
-    
+
     def _ensure_default_souls(self):
         """确保默认 souls 存在"""
         self.souls_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # 默认太极人格
         default_path = self.souls_dir / "default.yaml"
         if not default_path.exists():
@@ -94,12 +100,12 @@ context:
     - "主动识别并标注不确定性"
 """
             default_path.write_text(default_soul)
-    
+
     def load(self, soul_id: str) -> Soul:
         """加载指定 ID 的 Soul"""
         if soul_id in self._cache:
             return self._cache[soul_id]
-        
+
         soul_path = self.souls_dir / f"{soul_id}.yaml"
         if not soul_path.exists():
             # 尝试查找
@@ -110,21 +116,21 @@ context:
             else:
                 # 使用默认
                 soul_path = self.souls_dir / "default.yaml"
-        
-        with open(soul_path, "r", encoding="utf-8") as f:
+
+        with open(soul_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
-        
+
         soul = self._parse_soul_data(data)
         self._cache[soul_id] = soul
-        
+
         return soul
-    
+
     def _parse_soul_data(self, data: dict) -> Soul:
         """解析 Soul 数据"""
         layers = data.get("layers", {})
         character = layers.get("character", {})
         context = layers.get("context", {})
-        
+
         return Soul(
             id=data.get("id", "unknown"),
             name=data.get("name", "Unknown"),
@@ -136,11 +142,11 @@ context:
             evolution=data.get("evolution", {}),
             taiji_aspect=character.get("taiji_aspect", {}),
         )
-    
+
     def list_souls(self) -> list[str]:
         """列出所有可用的 Soul"""
         return [p.stem for p in self.souls_dir.glob("*.yaml")]
-    
+
     def save(self, soul: Soul):
         """保存 Soul 到文件"""
         data = {
@@ -154,18 +160,18 @@ context:
                 "context": soul.context,
             },
         }
-        
+
         soul_path = self.souls_dir / f"{soul.id}.yaml"
         with open(soul_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f, allow_unicode=True)
-        
+
         self._cache[soul.id] = soul
 
 
 def inject_soul(soul: Soul) -> str:
     """
     将 Soul 注入到系统提示
-    
+
     按照优先级：boundaries > ethics > character > context
     """
     lines = [
@@ -179,35 +185,37 @@ def inject_soul(soul: Soul) -> str:
         "",
         "## 性格特征",
     ]
-    
+
     if soul.character:
         traits = soul.character.get("traits", [])
         style = soul.character.get("style", {})
-        
+
         lines.append("### 特质")
         lines.extend([f"- {t}" for t in traits])
-        
+
         lines.append("### 风格")
         for key, value in style.items():
             lines.append(f"- {key}: {value}")
-        
+
         # 太极特色
         if "taiji_aspect" in soul.character:
             lines.append("")
             lines.append("### 太极特质")
             for aspect, desc in soul.character["taiji_aspect"].items():
                 lines.append(f"- {aspect}: {desc}")
-    
-    lines.extend([
-        "",
-        "## 应用场景",
-        f"- 领域: {soul.context.get('domain', '通用')}",
-    ])
-    
+
+    lines.extend(
+        [
+            "",
+            "## 应用场景",
+            f"- 领域: {soul.context.get('domain', '通用')}",
+        ]
+    )
+
     special = soul.context.get("special_instructions", [])
     if special:
         lines.append("")
         lines.append("### 特殊指令")
         lines.extend([f"- {s}" for s in special])
-    
+
     return "\n".join(lines)

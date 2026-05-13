@@ -2,15 +2,17 @@
 Approval Queue - 审批队列系统
 参考Dify v1.13.0 Human Input节点设计
 """
+
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class ApprovalDecision(str, Enum):
 class ApprovalConfig:
     timeout_seconds: int = 3600
     auto_reject_on_timeout: bool = False
-    escalation_email: Optional[str] = None
+    escalation_email: str | None = None
     require_reason: bool = True
     allow_modification: bool = True
     max_retries: int = 3
@@ -48,17 +50,17 @@ class ApprovalRequest:
     action_description: str
     justification: str
     risk_level: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     requested_at: datetime
     timeout_at: datetime
     status: ApprovalStatus = ApprovalStatus.PENDING
-    responded_at: Optional[datetime] = None
-    responded_by: Optional[str] = None
-    decision: Optional[ApprovalDecision] = None
-    decision_notes: Optional[str] = None
-    modified_parameters: Optional[Dict[str, Any]] = None
+    responded_at: datetime | None = None
+    responded_by: str | None = None
+    decision: ApprovalDecision | None = None
+    decision_notes: str | None = None
+    modified_parameters: dict[str, Any] | None = None
     retry_count: int = 0
-    agent_state: Optional[Dict[str, Any]] = None
+    agent_state: dict[str, Any] | None = None
 
     @classmethod
     def create(
@@ -68,10 +70,10 @@ class ApprovalRequest:
         action_description: str,
         justification: str,
         risk_level: str = "medium",
-        parameters: Optional[Dict[str, Any]] = None,
-        config: Optional[ApprovalConfig] = None,
-        agent_state: Optional[Dict[str, Any]] = None,
-    ) -> "ApprovalRequest":
+        parameters: dict[str, Any] | None = None,
+        config: ApprovalConfig | None = None,
+        agent_state: dict[str, Any] | None = None,
+    ) -> ApprovalRequest:
         cfg = config or ApprovalConfig()
         now = datetime.now()
         return cls(
@@ -89,12 +91,12 @@ class ApprovalRequest:
 
 
 class ApprovalQueue:
-    def __init__(self, config: Optional[ApprovalConfig] = None):
+    def __init__(self, config: ApprovalConfig | None = None):
         self.config = config or ApprovalConfig()
-        self._pending: Dict[str, ApprovalRequest] = {}
-        self._history: List[ApprovalRequest] = []
-        self._waiting: Dict[str, asyncio.Event] = {}
-        self._listeners: List[Callable] = []
+        self._pending: dict[str, ApprovalRequest] = {}
+        self._history: list[ApprovalRequest] = []
+        self._waiting: dict[str, asyncio.Event] = {}
+        self._listeners: list[Callable] = []
 
     def add_listener(self, callback: Callable) -> None:
         self._listeners.append(callback)
@@ -113,8 +115,8 @@ class ApprovalQueue:
         action_description: str,
         justification: str,
         risk_level: str = "medium",
-        parameters: Optional[Dict[str, Any]] = None,
-        agent_state: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any] | None = None,
+        agent_state: dict[str, Any] | None = None,
     ) -> str:
         request = ApprovalRequest.create(
             agent_name=agent_name,
@@ -135,7 +137,7 @@ class ApprovalQueue:
     async def wait_for_decision(
         self,
         request_id: str,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -146,7 +148,7 @@ class ApprovalQueue:
                 self._waiting[request_id].wait(),
                 timeout=timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             if self.config.auto_reject_on_timeout:
                 await self.reject(
                     request_id,
@@ -161,7 +163,7 @@ class ApprovalQueue:
         self,
         request_id: str,
         user_id: str,
-        notes: Optional[str] = None,
+        notes: str | None = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -181,7 +183,7 @@ class ApprovalQueue:
         self,
         request_id: str,
         user_id: str,
-        notes: Optional[str] = None,
+        notes: str | None = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -201,8 +203,8 @@ class ApprovalQueue:
         self,
         request_id: str,
         user_id: str,
-        modified_parameters: Dict[str, Any],
-        notes: Optional[str] = None,
+        modified_parameters: dict[str, Any],
+        notes: str | None = None,
     ) -> ApprovalRequest:
         if not self.config.allow_modification:
             raise ValueError("Modification not allowed")
@@ -221,13 +223,13 @@ class ApprovalQueue:
         logger.info(f"Approval modified and granted: {request_id}")
         return request
 
-    def get_pending(self) -> List[ApprovalRequest]:
+    def get_pending(self) -> list[ApprovalRequest]:
         return list(self._pending.values())
 
-    def get_pending_by_risk(self, risk_level: str) -> List[ApprovalRequest]:
+    def get_pending_by_risk(self, risk_level: str) -> list[ApprovalRequest]:
         return [r for r in self._pending.values() if r.risk_level == risk_level]
 
-    def get_history(self, limit: int = 100) -> List[ApprovalRequest]:
+    def get_history(self, limit: int = 100) -> list[ApprovalRequest]:
         return self._history[-limit:]
 
     def cancel(self, request_id: str) -> ApprovalRequest:

@@ -2,20 +2,19 @@
 Workflow Engine - 状态工作流引擎
 参考LangGraph状态图设计
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
-import uuid
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=Dict[str, Any])
+T = TypeVar("T", bound=dict[str, Any])
 
 
 class NodeResult:
@@ -24,8 +23,8 @@ class NodeResult:
         node_name: str,
         output: Any,
         success: bool = True,
-        error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         self.node_name = node_name
         self.output = output
@@ -38,18 +37,20 @@ class NodeResult:
 @dataclass
 class WorkflowState:
     current_node: str
-    history: List[Dict[str, Any]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    errors: List[str] = field(default_factory=list)
-    checkpoint_id: Optional[str] = None
+    history: list[dict[str, Any]] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    errors: list[str] = field(default_factory=list)
+    checkpoint_id: str | None = None
 
     def add_history(self, node: str, action: str, data: Any) -> None:
-        self.history.append({
-            "node": node,
-            "action": action,
-            "data": data,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self.history.append(
+            {
+                "node": node,
+                "action": action,
+                "data": data,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def add_error(self, error: str) -> None:
         self.errors.append(error)
@@ -63,23 +64,23 @@ class WorkflowConfig:
     timeout_seconds: int = 3600
     enable_cycles: bool = True
     checkpoint_enabled: bool = True
-    interrupt_on_nodes: List[str] = field(default_factory=list)
+    interrupt_on_nodes: list[str] = field(default_factory=list)
 
 
 class WorkflowEngine:
-    def __init__(self, config: Optional[WorkflowConfig] = None):
+    def __init__(self, config: WorkflowConfig | None = None):
         self.config = config or WorkflowConfig()
-        self._nodes: Dict[str, Callable] = {}
-        self._edges: Dict[str, str] = {}
-        self._conditional_edges: Dict[str, Callable] = {}
-        self._interrupt_nodes: set = set()
-        self._interrupted: Dict[str, asyncio.Event] = {}
-        self._state: Optional[WorkflowState] = None
+        self._nodes: dict[str, Callable[..., Any]] = {}
+        self._edges: dict[str, str] = {}
+        self._conditional_edges: dict[str, Callable[[WorkflowState], str]] = {}
+        self._interrupt_nodes: set[str] = set()
+        self._interrupted: dict[str, asyncio.Event] = {}
+        self._state: WorkflowState | None = None
 
     def add_node(
         self,
         name: str,
-        func: Callable,
+        func: Callable[..., Any],
     ) -> None:
         self._nodes[name] = func
         logger.info(f"Node added: {name}")
@@ -99,7 +100,7 @@ class WorkflowEngine:
     def add_conditional_edges(
         self,
         source: str,
-        conditions: Dict[str, str],
+        conditions: dict[str, str],
         default: str,
     ) -> None:
         if source not in self._nodes:
@@ -119,7 +120,7 @@ class WorkflowEngine:
                 raise ValueError(f"Target node not found: {target}")
         logger.info(f"Conditional edges added from {source}")
 
-    def interrupt_at(self, node_names: List[str]) -> None:
+    def interrupt_at(self, node_names: list[str]) -> None:
         self._interrupt_nodes.update(node_names)
         if self.config.checkpoint_enabled:
             self.config.interrupt_on_nodes.extend(node_names)
@@ -150,15 +151,15 @@ class WorkflowEngine:
             logger.error(error_msg)
             return NodeResult(node_name=node_name, output=None, success=False, error=str(e))
 
-    def _get_next_node(self, current_node: str, state: WorkflowState) -> Optional[str]:
+    def _get_next_node(self, current_node: str, state: WorkflowState) -> str | None:
         if current_node in self._conditional_edges:
             return self._conditional_edges[current_node](state)
         return self._edges.get(current_node)
 
     async def run(
         self,
-        initial_state: Optional[Dict[str, Any]] = None,
-        start_node: Optional[str] = None,
+        initial_state: dict[str, Any] | None = None,
+        start_node: str | None = None,
     ) -> WorkflowState:
         state = WorkflowState(
             current_node=start_node or self._get_start_node(),
@@ -170,7 +171,7 @@ class WorkflowEngine:
             iterations += 1
             current = state.current_node
             if current not in self._nodes:
-                logger.warning(f"No more nodes, workflow complete")
+                logger.warning("No more nodes, workflow complete")
                 break
             if current in self._interrupt_nodes:
                 self._interrupted[current] = asyncio.Event()
@@ -200,7 +201,7 @@ class WorkflowEngine:
                 return node
         return list(self._nodes.keys())[0]
 
-    def resume(self, state: Optional[Dict[str, Any]] = None) -> WorkflowState:
+    def resume(self, state: dict[str, Any] | None = None) -> WorkflowState:
         if not self._state:
             raise ValueError("No interrupted workflow to resume")
         if state:
@@ -212,13 +213,13 @@ class WorkflowEngine:
         logger.info(f"Workflow resumed at: {current}")
         return self._state
 
-    def get_state(self) -> Optional[WorkflowState]:
+    def get_state(self) -> WorkflowState | None:
         return self._state
 
-    def get_nodes(self) -> List[str]:
+    def get_nodes(self) -> list[str]:
         return list(self._nodes.keys())
 
-    def get_edges(self) -> Dict[str, str]:
+    def get_edges(self) -> dict[str, str]:
         return self._edges.copy()
 
     def visualize_mermaid(self) -> str:

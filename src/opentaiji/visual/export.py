@@ -2,15 +2,16 @@
 Workflow Visualizer - 工作流可视化导出器
 支持Mermaid、ASCII、JSON等格式
 """
+
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
-import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,23 +30,23 @@ class NodeData:
     id: str
     label: str
     node_type: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class EdgeData:
     source: str
     target: str
-    label: Optional[str] = None
+    label: str | None = None
     edge_type: str = "default"
 
 
 @dataclass
 class WorkflowGraph:
     name: str
-    nodes: List[NodeData] = field(default_factory=list)
-    edges: List[EdgeData] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    nodes: list[NodeData] = field(default_factory=list)
+    edges: list[EdgeData] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class WorkflowExporter(ABC):
@@ -74,7 +75,7 @@ class MermaidExporter(WorkflowExporter):
             source = self._safe_id(edge.source)
             target = self._safe_id(edge.target)
             if edge.label:
-                lines.append(f"    {source} -->|\"{edge.label}\"| {target}")
+                lines.append(f'    {source} -->|"{edge.label}"| {target}')
             else:
                 lines.append(f"    {source} --> {target}")
         return "\n".join(lines)
@@ -192,7 +193,7 @@ class HTMLExporter(WorkflowExporter):
 
 
 class WorkflowExporterFactory:
-    _exporters = {
+    _exporters: dict[ExportFormat, type[WorkflowExporter]] = {
         ExportFormat.MERMAID: MermaidExporter,
         ExportFormat.MERMAID_FLOWCHART: MermaidExporter,
         ExportFormat.MERMAID_SEQUENCE: MermaidSequenceExporter,
@@ -202,10 +203,11 @@ class WorkflowExporterFactory:
     }
 
     @classmethod
-    def create(cls, format: ExportFormat, **kwargs) -> WorkflowExporter:
+    def create(cls, format: ExportFormat, **kwargs: Any) -> WorkflowExporter:
         exporter_class = cls._exporters.get(format)
         if not exporter_class:
             raise ValueError(f"Unknown format: {format}")
+        assert isinstance(exporter_class, type)
         return exporter_class(**kwargs)
 
     @classmethod

@@ -1,15 +1,16 @@
 """
 Input Guardrails - 输入安全验证
 """
+
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Set
-from .core import Guardrail, GuardrailConfig, ValidationResult, ValidationLevel
+
+from .core import Guardrail, GuardrailConfig, ValidationResult
 
 
 class ContentFilter(Guardrail):
-    BLOCKED_PATTERNS: Set[str] = {
+    BLOCKED_PATTERNS: set[str] = {
         r"<script[^>]*>.*?</script>",
         r"javascript:",
         r"on\w+\s*=",
@@ -20,14 +21,11 @@ class ContentFilter(Guardrail):
 
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
-        custom_patterns: Optional[List[str]] = None,
+        config: GuardrailConfig | None = None,
+        custom_patterns: list[str] | None = None,
     ):
         super().__init__(config)
-        self.patterns = [
-            re.compile(p, re.IGNORECASE | re.DOTALL)
-            for p in self.BLOCKED_PATTERNS
-        ]
+        self.patterns = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in self.BLOCKED_PATTERNS]
         if custom_patterns:
             self.patterns.extend(re.compile(p, re.IGNORECASE) for p in custom_patterns)
 
@@ -48,8 +46,8 @@ class ContentFilter(Guardrail):
 class ProfanityFilter(Guardrail):
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
-        custom_words: Optional[List[str]] = None,
+        config: GuardrailConfig | None = None,
+        custom_words: list[str] | None = None,
     ):
         super().__init__(config)
         self.blocked_words = set(custom_words or [])
@@ -68,18 +66,19 @@ class ProfanityFilter(Guardrail):
 class RateLimitGuardrail(Guardrail):
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
+        config: GuardrailConfig | None = None,
         max_requests_per_minute: int = 60,
         max_tokens_per_minute: int = 100000,
     ):
         super().__init__(config)
         self.max_rpm = max_requests_per_minute
         self.max_tpm = max_tokens_per_minute
-        self._request_counts: List[float] = []
-        self._token_counts: List[float] = []
+        self._request_counts: list[float] = []
+        self._token_counts: list[float] = []
 
     async def validate(self, text: str) -> ValidationResult:
         import time
+
         now = time.time()
         self._request_counts = [t for t in self._request_counts if now - t < 60]
         self._token_counts = [t for t in self._token_counts if now - t < 60]
@@ -96,15 +95,13 @@ class RateLimitGuardrail(Guardrail):
                 message="Token rate limit exceeded",
                 details={"limit": self.max_tpm},
             )
-        return ValidationResult.pass_result(
-            details={"requests_in_window": len(self._request_counts)}
-        )
+        return ValidationResult.pass_result(details={"requests_in_window": len(self._request_counts)})
 
 
 class LengthGuardrail(Guardrail):
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
+        config: GuardrailConfig | None = None,
         min_length: int = 0,
         max_length: int = 100000,
     ):
@@ -129,7 +126,7 @@ class LengthGuardrail(Guardrail):
 
 class InputGuardrail:
     @staticmethod
-    def default(config: Optional[GuardrailConfig] = None) -> List[Guardrail]:
+    def default(config: GuardrailConfig | None = None) -> list[Guardrail]:
         return [
             ContentFilter(config),
             LengthGuardrail(config, max_length=50000),
@@ -137,7 +134,7 @@ class InputGuardrail:
         ]
 
     @staticmethod
-    def strict(config: Optional[GuardrailConfig] = None) -> List[Guardrail]:
+    def strict(config: GuardrailConfig | None = None) -> list[Guardrail]:
         return [
             ContentFilter(config, custom_patterns=[r"\b(SQL|RCE|Injection)\b"]),
             LengthGuardrail(config, max_length=10000),

@@ -2,18 +2,19 @@
 OpenTaiji Observability Module
 全链路追踪系统 - 参考LangSmith设计
 """
-from .tracing import (
-    TracingManager,
-    TraceSpan,
-    TraceEvent,
-    SpanStatus,
-    SpanKind,
-)
+
 from .exporter import (
-    TraceExporter,
     ConsoleExporter,
     FileExporter,
     LangSmithExporter,
+    TraceExporter,
+)
+from .tracing import (
+    SpanKind,
+    SpanStatus,
+    TraceEvent,
+    TraceSpan,
+    TracingManager,
 )
 
 __all__ = [

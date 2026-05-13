@@ -1,23 +1,26 @@
 """
 Output Guardrails - 输出质量与安全验证
 """
+
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Set
-from .core import Guardrail, GuardrailConfig, ValidationResult, ValidationLevel
+
+from .core import Guardrail, GuardrailConfig, ValidationResult
 
 
 class SensitiveDataFilter(Guardrail):
-    EMAIL_PATTERN = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-    PHONE_PATTERN = re.compile(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b')
-    SSN_PATTERN = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
-    CREDIT_CARD_PATTERN = re.compile(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b')
-    API_KEY_PATTERN = re.compile(r'\b(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*["\']?[A-Za-z0-9_-]{20,}["\']?', re.IGNORECASE)
+    EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+    PHONE_PATTERN = re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b")
+    SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+    CREDIT_CARD_PATTERN = re.compile(r"\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")
+    API_KEY_PATTERN = re.compile(
+        r'\b(?:api[_-]?key|secret[_-]?key|auth[_-]?token)\s*[:=]\s*["\']?[A-Za-z0-9_-]{20,}["\']?', re.IGNORECASE
+    )
 
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
+        config: GuardrailConfig | None = None,
         filter_emails: bool = True,
         filter_phones: bool = True,
         filter_ssn: bool = True,
@@ -73,7 +76,7 @@ class SensitiveDataFilter(Guardrail):
 class QualityGate(Guardrail):
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
+        config: GuardrailConfig | None = None,
         min_length: int = 10,
         max_repeated_chars: int = 5,
         require_capitalized: bool = False,
@@ -87,14 +90,14 @@ class QualityGate(Guardrail):
         issues = []
         if len(text) < self.min_length:
             issues.append(f"Output too short: {len(text)} < {self.min_length}")
-        repeated = re.compile(r'(.)\1{' + str(self.max_repeated) + r',}')
+        repeated = re.compile(r"(.)\1{" + str(self.max_repeated) + r",}")
         if repeated.search(text):
             issues.append("Excessive repeated characters detected")
         if self.require_capitalized and not any(c.isupper() for c in text):
             issues.append("No capitalized letters found")
         empty_patterns = [
-            r'\n\s*\n\s*\n',
-            r' {5,}',
+            r"\n\s*\n\s*\n",
+            r" {5,}",
         ]
         for pattern in empty_patterns:
             if re.search(pattern, text):
@@ -111,7 +114,7 @@ class QualityGate(Guardrail):
 class HallucinationGate(Guardrail):
     def __init__(
         self,
-        config: Optional[GuardrailConfig] = None,
+        config: GuardrailConfig | None = None,
         confidence_threshold: float = 0.7,
     ):
         super().__init__(config)
@@ -142,7 +145,7 @@ class HallucinationGate(Guardrail):
 
 class OutputGuardrail:
     @staticmethod
-    def default(config: Optional[GuardrailConfig] = None) -> List[Guardrail]:
+    def default(config: GuardrailConfig | None = None) -> list[Guardrail]:
         return [
             SensitiveDataFilter(config),
             QualityGate(config),
@@ -150,7 +153,7 @@ class OutputGuardrail:
         ]
 
     @staticmethod
-    def strict(config: Optional[GuardrailConfig] = None) -> List[Guardrail]:
+    def strict(config: GuardrailConfig | None = None) -> list[Guardrail]:
         return [
             SensitiveDataFilter(config),
             QualityGate(config, require_capitalized=True),

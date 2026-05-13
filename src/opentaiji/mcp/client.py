@@ -1,16 +1,19 @@
 """
 MCP Client Adapter - 连接外部MCP Server作为工具
 """
+
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
+
 import aiohttp
-from .protocol import MCPMessage, MCPTool, MCPProtocol
+
 from ..tools.registry import Tool, ToolResult
+from .protocol import MCPMessage, MCPProtocol, MCPTool
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 class MCPConnectionConfig:
     url: str
     name: str = "mcp_server"
-    auth_token: Optional[str] = None
+    auth_token: str | None = None
     timeout: int = 30
     retry_count: int = 3
 
@@ -27,11 +30,11 @@ class MCPConnectionConfig:
 class MCPClientAdapter:
     def __init__(
         self,
-        config: Optional[MCPConnectionConfig] = None,
+        config: MCPConnectionConfig | None = None,
     ):
         self.config = config
-        self._tools: Dict[str, MCPTool] = {}
-        self._session: Optional[aiohttp.ClientSession] = None
+        self._tools: dict[str, MCPTool] = {}
+        self._session: aiohttp.ClientSession | None = None
         self._request_id = 0
         self._initialized = False
 
@@ -73,8 +76,9 @@ class MCPClientAdapter:
             headers["Authorization"] = f"Bearer {self.config.auth_token}"
         self._request_id += 1
         message.id = self._request_id
+        config_url = self.config.url if self.config else ""
         async with self._session.post(
-            f"{self.config.url}/message",
+            f"{config_url}/message",
             json=json.loads(message.to_json()),
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=self.config.timeout if self.config else 30),
@@ -94,16 +98,14 @@ class MCPClientAdapter:
                 self._tools[tool.name] = tool
         logger.info(f"Loaded {len(self._tools)} tools from MCP server")
 
-    def get_tools(self) -> List[MCPTool]:
+    def get_tools(self) -> list[MCPTool]:
         return list(self._tools.values())
 
-    async def call_tool(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
+    async def call_tool(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         if not self._initialized:
-            return ToolResult(success=False, output=f"", error="Not connected to MCP server")
+            return ToolResult(success=False, output="", error="Not connected to MCP server")
         try:
-            response = await self._send_request(
-                MCPProtocol.tools_call(name, arguments)
-            )
+            response = await self._send_request(MCPProtocol.tools_call(name, arguments))
             if response.error:
                 return ToolResult(success=False, output="", error=str(response.error))
             result = response.result
@@ -130,9 +132,10 @@ class MCPClientAdapter:
                 return result.output
             else:
                 raise RuntimeError(result.error or "Unknown error")
+
         return wrapper
 
-    def to_opentaiji_tools(self) -> List[Tool]:
+    def to_opentaiji_tools(self) -> list[Tool]:
         tools = []
         for mcp_tool in self._tools.values():
             tool = Tool(

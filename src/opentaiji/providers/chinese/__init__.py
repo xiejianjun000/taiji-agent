@@ -2,12 +2,15 @@
 国产模型 Provider 模块
 """
 
-from opentaiji.providers.chinese.qwen import QwenProvider
+from typing import Any
+
+from opentaiji.providers.base import LLMProvider
+from opentaiji.providers.chinese.doubao import DoubaoProvider
 from opentaiji.providers.chinese.glm import GLMProvider
 from opentaiji.providers.chinese.kimi import KimiProvider
-from opentaiji.providers.chinese.doubao import DoubaoProvider
+from opentaiji.providers.chinese.qwen import QwenProvider
 
-CHINESE_PROVIDERS = {
+CHINESE_PROVIDERS: dict[str, dict[str, Any]] = {
     "qwen": {
         "name": "通义千问",
         "provider": QwenProvider,
@@ -47,14 +50,14 @@ CHINESE_PROVIDERS = {
 }
 
 
-def get_chinese_provider(provider_name: str, **kwargs):
+def get_chinese_provider(provider_name: str, **kwargs: Any) -> LLMProvider:
     """获取国产模型 Provider"""
     if provider_name not in CHINESE_PROVIDERS:
         raise ValueError(f"Unknown provider: {provider_name}")
-    
+
     config = CHINESE_PROVIDERS[provider_name]
-    provider_class = config["provider"]
-    
+    provider_class: type[LLMProvider] = config["provider"]
+
     return provider_class(**kwargs)
 
 
@@ -74,7 +77,7 @@ def list_chinese_providers() -> dict:
 
 __all__ = [
     "QwenProvider",
-    "GLMProvider", 
+    "GLMProvider",
     "KimiProvider",
     "DoubaoProvider",
     "CHINESE_PROVIDERS",

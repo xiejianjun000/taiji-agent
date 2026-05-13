@@ -2,20 +2,24 @@
 MCP Server Adapter - 将OpenTaiji Agent发布为MCP Server
 参考Dify v1.6.0双向MCP集成设计
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
 from aiohttp import web
+
 from .protocol import (
     MCPMessage,
-    MCPTool,
-    MCPResource,
     MCPProtocol,
     MCPProtocolVersion,
+    MCPResource,
+    MCPTool,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,21 +33,21 @@ class MCPServerConfig:
     server_version: str = "2.0.0"
     protocol_version: str = MCPProtocolVersion.LATEST.value
     enable_cors: bool = True
-    auth_token: Optional[str] = None
+    auth_token: str | None = None
 
 
 class MCPServerAdapter:
     def __init__(
         self,
         agent: Any,
-        config: Optional[MCPServerConfig] = None,
+        config: MCPServerConfig | None = None,
     ):
         self.agent = agent
         self.config = config or MCPServerConfig()
-        self._tools: Dict[str, MCPTool] = {}
-        self._resources: Dict[str, MCPResource] = {}
-        self._app: Optional[web.Application] = None
-        self._runner: Optional[web.AppRunner] = None
+        self._tools: dict[str, MCPTool] = {}
+        self._resources: dict[str, MCPResource] = {}
+        self._app: web.Application | None = None
+        self._runner: web.AppRunner | None = None
         self._initialized = False
 
     def register_tool(self, tool: MCPTool) -> None:
@@ -55,7 +59,7 @@ class MCPServerAdapter:
         name: str,
         description: str,
         func: Callable,
-        input_schema: Optional[Dict[str, Any]] = None,
+        input_schema: dict[str, Any] | None = None,
     ) -> None:
         if input_schema is None:
             input_schema = self._generate_schema_from_function(func)
@@ -92,25 +96,26 @@ class MCPServerAdapter:
         self._resources[resource.uri] = resource
         logger.info(f"Registered MCP resource: {resource.uri}")
 
-    def _generate_schema_from_function(self, func: Callable) -> Dict[str, Any]:
+    def _generate_schema_from_function(self, func: Callable) -> dict[str, Any]:
         import inspect
+
         sig = inspect.signature(func)
         properties = {}
         required = []
         for param_name, param in sig.parameters.items():
             param_type = "string"
-            if param.annotation == int:
+            if param.annotation is int:
                 param_type = "integer"
-            elif param.annotation == float:
+            elif param.annotation is float:
                 param_type = "number"
-            elif param.annotation == bool:
+            elif param.annotation is bool:
                 param_type = "boolean"
-            elif param.annotation == list:
+            elif param.annotation is list:
                 param_type = "array"
-            elif param.annotation == dict:
+            elif param.annotation is dict:
                 param_type = "object"
             properties[param_name] = {"type": param_type}
-            if param.default == inspect.Parameter.empty:
+            if param.default is inspect.Parameter.empty:
                 required.append(param_name)
         return {
             "type": "object",

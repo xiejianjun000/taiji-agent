@@ -15,94 +15,7 @@ OpenTaiji Python Package
 - Visual Workflow
 """
 
-from opentaiji.agent.engine import TaijiAgent, AgentConfig
-from opentaiji.wfgy import WFGYVerifier, HallucinationDetector
-from opentaiji.souls import SoulLoader, Soul
-from opentaiji.memory import SessionMemory
-from opentaiji.tools import ToolRegistry
-from opentaiji.providers import AnthropicProvider, OpenAIProvider
-from opentaiji.providers.chinese import (
-    QwenProvider,
-    GLMProvider,
-    KimiProvider,
-    DoubaoProvider,
-    CHINESE_PROVIDERS,
-    list_chinese_providers,
-)
-from opentaiji.gateway import MessageGateway, create_gateway
-from opentaiji.skills import SkillManager, Skill, SkillCreator
-from opentaiji.learning import HonchoMemory, SelfImprovingLoop
-from opentaiji.multiagent import (
-    MultiAgentCoordinator,
-    AgentSwarm,
-    MessageBus,
-    AgentRole,
-    CoordinationMode,
-    AgentMessage,
-    AgentTask,
-    BaseAgent,
-    TaijiAgent as MultiAgent,
-)
-from opentaiji.mcp import (
-    MCPServerAdapter,
-    MCPServerConfig,
-    MCPClientAdapter,
-    MCPConnectionConfig,
-    MCPProtocol,
-    MCPTool,
-    MCPResource,
-)
-from opentaiji.guardrails import (
-    Guardrail,
-    ValidationResult,
-    GuardrailConfig,
-    GuardrailManager,
-    InputGuardrail,
-    ContentFilter,
-    RateLimitGuardrail,
-    OutputGuardrail,
-    SensitiveDataFilter,
-    QualityGate,
-)
-from opentaiji.observability import (
-    TracingManager,
-    TraceSpan,
-    TraceEvent,
-    SpanStatus,
-    SpanKind,
-    ConsoleExporter,
-    FileExporter,
-    LangSmithExporter,
-)
-from opentaiji.hitl import (
-    ApprovalQueue,
-    ApprovalRequest,
-    ApprovalDecision,
-    ApprovalStatus,
-    ApprovalConfig,
-    ConfidenceGate,
-    ConfidenceLevel,
-    Checkpoint,
-    CheckpointManager,
-)
-from opentaiji.workflow import (
-    WorkflowEngine,
-    WorkflowState,
-    WorkflowConfig,
-    NodeResult,
-    WorkflowGraph,
-    Node,
-    Edge,
-    ConditionalEdge,
-)
-from opentaiji.handoffs import (
-    Handoff,
-    HandoffConfig,
-    HandoffManager,
-    HandoffResult,
-    HandoffContext,
-    AgentRegistry,
-)
+from opentaiji.agent.engine import AgentConfig, TaijiAgent
 from opentaiji.code import (
     CodeExecutor,
     ExecutionResult,
@@ -110,15 +23,103 @@ from opentaiji.code import (
     SandboxConfig,
     SandboxManager,
 )
-from opentaiji.visual import (
-    WorkflowExporter,
-    MermaidExporter,
-    ASCIIExporter,
-    JSONExporter,
-    HTMLExporter,
-    ExportFormat,
+from opentaiji.gateway import MessageGateway, create_gateway
+from opentaiji.guardrails import (
+    ContentFilter,
+    Guardrail,
+    GuardrailConfig,
+    GuardrailManager,
+    InputGuardrail,
+    OutputGuardrail,
+    QualityGate,
+    RateLimitGuardrail,
+    SensitiveDataFilter,
+    ValidationResult,
 )
-
+from opentaiji.handoffs import (
+    AgentRegistry,
+    Handoff,
+    HandoffConfig,
+    HandoffContext,
+    HandoffManager,
+    HandoffResult,
+)
+from opentaiji.hitl import (
+    ApprovalConfig,
+    ApprovalDecision,
+    ApprovalQueue,
+    ApprovalRequest,
+    ApprovalStatus,
+    Checkpoint,
+    CheckpointManager,
+    ConfidenceGate,
+    ConfidenceLevel,
+)
+from opentaiji.learning import HonchoMemory, SelfImprovingLoop
+from opentaiji.mcp import (
+    MCPClientAdapter,
+    MCPConnectionConfig,
+    MCPProtocol,
+    MCPResource,
+    MCPServerAdapter,
+    MCPServerConfig,
+    MCPTool,
+)
+from opentaiji.memory import SessionMemory
+from opentaiji.multiagent import (
+    AgentMessage,
+    AgentRole,
+    AgentSwarm,
+    AgentTask,
+    BaseAgent,
+    CoordinationMode,
+    MessageBus,
+    MultiAgentCoordinator,
+)
+from opentaiji.multiagent import (
+    TaijiAgent as MultiAgent,
+)
+from opentaiji.observability import (
+    ConsoleExporter,
+    FileExporter,
+    LangSmithExporter,
+    SpanKind,
+    SpanStatus,
+    TraceEvent,
+    TraceSpan,
+    TracingManager,
+)
+from opentaiji.providers import AnthropicProvider, OpenAIProvider
+from opentaiji.providers.chinese import (
+    CHINESE_PROVIDERS,
+    DoubaoProvider,
+    GLMProvider,
+    KimiProvider,
+    QwenProvider,
+    list_chinese_providers,
+)
+from opentaiji.skills import Skill, SkillCreator, SkillManager
+from opentaiji.souls import Soul, SoulLoader
+from opentaiji.tools import ToolRegistry
+from opentaiji.visual import (
+    ASCIIExporter,
+    ExportFormat,
+    HTMLExporter,
+    JSONExporter,
+    MermaidExporter,
+    WorkflowExporter,
+)
+from opentaiji.wfgy import HallucinationDetector, WFGYVerifier
+from opentaiji.workflow import (
+    ConditionalEdge,
+    Edge,
+    Node,
+    NodeResult,
+    WorkflowConfig,
+    WorkflowEngine,
+    WorkflowGraph,
+    WorkflowState,
+)
 
 __version__ = "2.0.0"
 

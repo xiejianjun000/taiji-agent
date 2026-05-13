@@ -3,19 +3,20 @@ OpenTaiji Agent Engine - 融合 Hermes Agent + Harness + WFGY
 核心 Agent Loop 实现
 """
 
-import asyncio
 import logging
-from typing import Optional, AsyncGenerator, Any
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any
 
-from opentaiji.souls.loader import SoulLoader, inject_soul
-from opentaiji.wfgy.verifier import WFGYVerifier, HallucinationDetector, SelfConsistencyChecker
-from opentaiji.memory.session import SessionMemory
-from opentaiji.tools.registry import ToolRegistry
-from opentaiji.providers.base import LLMProvider
+from pydantic import BaseModel
+
 from opentaiji.events.bus import EventBus
+from opentaiji.memory.session import SessionMemory
+from opentaiji.providers.base import LLMProvider
+from opentaiji.souls.loader import SoulLoader, inject_soul
+from opentaiji.tools.registry import ToolRegistry
+from opentaiji.wfgy.verifier import HallucinationDetector, SelfConsistencyChecker, WFGYVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,8 @@ class TaskStatus(Enum):
 class Message(BaseModel):
     role: str
     content: str
-    tool_calls: Optional[list[dict]] = None
-    tool_call_id: Optional[str] = None
+    tool_calls: list[dict] | None = None
+    tool_call_id: str | None = None
 
 
 class ToolCall(BaseModel):
@@ -51,8 +52,8 @@ class ToolResult(BaseModel):
 class AgentConfig:
     provider: str = "anthropic"
     model: str = "claude-sonnet-4-20250514"
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
+    api_key: str | None = None
+    base_url: str | None = None
     soul: str = "default"
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -68,8 +69,8 @@ class AgentConfig:
 @dataclass
 class TaskResult:
     status: TaskStatus
-    content: Optional[str] = None
-    error: Optional[str] = None
+    content: str | None = None
+    error: str | None = None
     iterations: int = 0
     tools_used: list[str] = field(default_factory=list)
     wfgy_blocked: int = 0
@@ -79,7 +80,7 @@ class TaskResult:
 class TaijiAgent:
     """
     太极 Agent - 融合三大框架精华
-    
+
     特性:
     - Agent Loop 基于 cgast/harness (~350行核心)
     - WFGY 防幻觉来自 OpenTaiji
@@ -87,16 +88,16 @@ class TaijiAgent:
     - Soul 人格系统来自 Harness
     - 记忆系统来自 Hermes Honcho
     """
-    
+
     def __init__(
         self,
-        config: Optional[AgentConfig] = None,
-        provider: Optional[LLMProvider] = None,
+        config: AgentConfig | None = None,
+        provider: LLMProvider | None = None,
     ):
         self.config = config or AgentConfig()
         self.provider = provider
         self.event_bus = EventBus()
-        
+
         # 核心组件初始化
         self.soul_loader = SoulLoader()
         self.wfgy = WFGYVerifier()
@@ -104,25 +105,27 @@ class TaijiAgent:
         self.consistency_checker = SelfConsistencyChecker()
         self.memory = SessionMemory()
         self.tools = ToolRegistry()
-        
+
         # 状态
         self.messages: list[Message] = []
         self.iteration_count = 0
-        
+
         # 初始化提供商
         if self.provider is None:
             self._init_provider()
-    
+
     def _init_provider(self):
         """初始化 LLM 提供商"""
         if self.config.provider == "anthropic":
             from opentaiji.providers.anthropic import AnthropicProvider
+
             self.provider = AnthropicProvider(
                 api_key=self.config.api_key,
                 model=self.config.model,
             )
         elif self.config.provider == "openai":
             from opentaiji.providers.openai import OpenAIProvider
+
             self.provider = OpenAIProvider(
                 api_key=self.config.api_key,
                 model=self.config.model,
@@ -130,29 +133,32 @@ class TaijiAgent:
             )
         elif self.config.provider == "qwen":
             from opentaiji.providers.chinese.qwen import QwenProvider
+
             self.provider = QwenProvider(
                 api_key=self.config.api_key,
                 model=self.config.model,
             )
         elif self.config.provider == "glm":
             from opentaiji.providers.chinese.glm import GLMProvider
+
             self.provider = GLMProvider(
                 api_key=self.config.api_key,
                 model=self.config.model,
             )
         elif self.config.provider == "kimi":
             from opentaiji.providers.chinese.kimi import KimiProvider
+
             self.provider = KimiProvider(
                 api_key=self.config.api_key,
                 model=self.config.model,
             )
         else:
             raise ValueError(f"Unsupported provider: {self.config.provider}")
-    
-    async def run(self, task: str, system_message: Optional[str] = None) -> TaskResult:
+
+    async def run(self, task: str, system_message: str | None = None) -> TaskResult:
         """
         执行任务 - 太极 Agent Loop
-        
+
         流程:
         1. Assemble prompt (soul + skills + history)
         2. WFGY 预处理验证
@@ -163,149 +169,179 @@ class TaijiAgent:
         7. 状态更新
         8. 重复直到完成
         """
-        self.event_bus.emit("agent:start", {"task": task})
-        
+        self.event_bus.emit_sync("agent:start", {"task": task})
+
         # 初始化消息
         self.messages = []
         self.iteration_count = 0
-        
+
         # 系统提示
         system_prompt = self._build_system_prompt()
         if system_message:
             system_prompt += f"\n\n{system_message}"
-        
+
         self.messages.append(Message(role="system", content=system_prompt))
         self.messages.append(Message(role="user", content=task))
-        
+
         # Agent Loop
         while self.iteration_count < self.config.max_iterations:
             try:
                 # 1. Assemble prompt
-                self.event_bus.emit("prompt:assemble", {"iteration": self.iteration_count})
-                prompt = self._assemble_prompt()
-                
+                self.event_bus.emit_sync("prompt:assemble", {"iteration": self.iteration_count})
+                self._assemble_prompt()
+
                 # 2. Emit loop start event
-                self.event_bus.emit("loop:start", {
-                    "iteration": self.iteration_count,
-                    "messages_count": len(self.messages),
-                })
-                
+                self.event_bus.emit_sync(
+                    "loop:start",
+                    {
+                        "iteration": self.iteration_count,
+                        "messages_count": len(self.messages),
+                    },
+                )
+
                 # 3. LLM 请求
-                self.event_bus.emit("llm:request", {"iteration": self.iteration_count})
-                
-                response = await self.provider.chat(
-                    messages=self.messages,
+                self.event_bus.emit_sync("llm:request", {"iteration": self.iteration_count})
+
+                provider = self.provider
+                if provider is None:
+                    raise ValueError("LLM provider not initialized")
+                response = await provider.chat(
+                    messages=[msg.model_dump() for msg in self.messages],
                     tools=self.tools.get_schemas() if self.tools.has_tools() else None,
                     temperature=self.config.temperature,
                     max_tokens=self.config.max_tokens,
                     stream=self.config.stream,
                 )
-                
-                self.event_bus.emit("llm:response", {
-                    "has_content": bool(response.content),
-                    "has_tool_calls": bool(response.tool_calls),
-                })
-                
+
+                self.event_bus.emit_sync(
+                    "llm:response",
+                    {
+                        "has_content": bool(response.content),
+                        "has_tool_calls": bool(response.tool_calls),
+                    },
+                )
+
                 # 4. WFGY 防幻觉验证 (后处理)
                 if self.config.wfgy_enabled and response.content:
                     response = await self._verify_and_annotate(response)
-                
+
                 # 5. 解析响应
                 if response.tool_calls:
                     # 工具调用
                     for tool_call in response.tool_calls:
-                        self.event_bus.emit("tool:request", {
-                            "name": tool_call.name,
-                            "arguments": tool_call.arguments,
-                        })
-                        
+                        self.event_bus.emit_sync(
+                            "tool:request",
+                            {
+                                "name": tool_call.name,
+                                "arguments": tool_call.arguments,
+                            },
+                        )
+
                         # 执行工具
                         result = await self.tools.execute(tool_call)
-                        
-                        self.messages.append(Message(
-                            role="assistant",
-                            content=response.content or "",
-                            tool_calls=[tc.model_dump() for tc in response.tool_calls],
-                        ))
-                        self.messages.append(Message(
-                            role="tool",
-                            content=result.content,
-                            tool_call_id=tool_call.id,
-                        ))
-                        
-                        self.event_bus.emit("tool:result", {
-                            "name": tool_call.name,
-                            "success": not result.is_error,
-                        })
-                    
+
+                        self.messages.append(
+                            Message(
+                                role="assistant",
+                                content=response.content or "",
+                                tool_calls=[tc.model_dump() for tc in response.tool_calls],
+                            )
+                        )
+                        self.messages.append(
+                            Message(
+                                role="tool",
+                                content=result.content,
+                                tool_call_id=tool_call.id,
+                            )
+                        )
+
+                        self.event_bus.emit_sync(
+                            "tool:result",
+                            {
+                                "name": tool_call.name,
+                                "success": not (hasattr(result, "is_error") and result.is_error),
+                            },
+                        )
+
                     self.iteration_count += 1
                 else:
                     # 最终响应
-                    self.messages.append(Message(
-                        role="assistant",
-                        content=response.content,
-                    ))
-                    
+                    self.messages.append(
+                        Message(
+                            role="assistant",
+                            content=response.content or "",
+                        )
+                    )
+
                     # 保存到记忆
-                    await self.memory.save_session(self.messages)
-                    
-                    self.event_bus.emit("agent:end", {
-                        "status": "completed",
-                        "iterations": self.iteration_count,
-                    })
-                    
+                    await self.memory.save_session([msg.model_dump() for msg in self.messages])
+
+                    self.event_bus.emit_sync(
+                        "agent:end",
+                        {
+                            "status": "completed",
+                            "iterations": self.iteration_count,
+                        },
+                    )
+
                     return TaskResult(
                         status=TaskStatus.COMPLETED,
                         content=response.content,
                         iterations=self.iteration_count,
                         tools_used=self.tools.get_used_tools(),
                     )
-            
+
             except Exception as e:
                 logger.error(f"Error in iteration {self.iteration_count}: {e}")
-                self.event_bus.emit("error", {"error": str(e)})
-                
+                self.event_bus.emit_sync("error", {"error": str(e)})
+
                 if "max iterations" in str(e).lower():
                     return TaskResult(
                         status=TaskStatus.ABORTED,
                         error=str(e),
                         iterations=self.iteration_count,
                     )
-        
+
         # 达到最大迭代次数
-        self.event_bus.emit("agent:end", {
-            "status": "max_iterations",
-            "iterations": self.iteration_count,
-        })
-        
+        self.event_bus.emit_sync(
+            "agent:end",
+            {
+                "status": "max_iterations",
+                "iterations": self.iteration_count,
+            },
+        )
+
         return TaskResult(
             status=TaskStatus.ABORTED,
             error="达到最大迭代次数",
             iterations=self.iteration_count,
         )
-    
-    async def stream_run(self, task: str, system_message: Optional[str] = None) -> AsyncGenerator[str, None]:
+
+    async def stream_run(self, task: str, system_message: str | None = None) -> AsyncGenerator[str, None]:
         """
         流式执行任务
         """
-        self.event_bus.emit("agent:start", {"task": task, "stream": True})
-        
+        self.event_bus.emit_sync("agent:start", {"task": task, "stream": True})
+
         self.messages = []
         self.iteration_count = 0
-        
+
         system_prompt = self._build_system_prompt()
         if system_message:
             system_prompt += f"\n\n{system_message}"
-        
+
         self.messages.append(Message(role="system", content=system_prompt))
         self.messages.append(Message(role="user", content=task))
-        
+
         while self.iteration_count < self.config.max_iterations:
             try:
                 response_text = ""
-                
-                async for chunk in self.provider.stream_chat(
-                    messages=self.messages,
+
+                provider = self.provider
+                if provider is None:
+                    raise ValueError("LLM provider not initialized")
+                async for chunk in provider.stream_chat(
+                    messages=[msg.model_dump() for msg in self.messages],
                     tools=self.tools.get_schemas() if self.tools.has_tools() else None,
                     temperature=self.config.temperature,
                     max_tokens=self.config.max_tokens,
@@ -313,25 +349,25 @@ class TaijiAgent:
                     if chunk:
                         response_text += chunk
                         yield chunk
-                
+
                 # 处理完整响应
                 if self.config.wfgy_enabled and response_text:
                     risk = self.hallucination_detector.detect(response_text)
                     if risk > (1 - self.config.wfgy_threshold):
                         yield f"\n\n[⚠️ 幻觉风险 {risk:.1%}]"
-                
+
                 self.iteration_count += 1
                 break
-            
+
             except Exception as e:
                 logger.error(f"Stream error: {e}")
                 yield f"\n\n[错误: {str(e)}]"
                 break
-    
+
     def _build_system_prompt(self) -> str:
         """构建系统提示 - 融合 Soul + WFGY + 太极哲学"""
         soul = self.soul_loader.load(self.config.soul)
-        
+
         prompt_parts = [
             "# 太极 Agent (OpenTaiji 2.0)",
             "",
@@ -348,39 +384,40 @@ class TaijiAgent:
             "- 阴: 直觉、创造、共情",
             "- 在确定性和创造性之间找到平衡",
         ]
-        
+
         return "\n".join(prompt_parts)
-    
+
     def _assemble_prompt(self) -> list[dict]:
         """组装提示"""
         return [msg.model_dump() for msg in self.messages]
-    
+
     async def _verify_and_annotate(self, response) -> Any:
         """WFGY 验证并注解"""
         if not response.content:
             return response
-        
+
         # 1. 符号层验证
         wfgy_passed = self.wfgy.verify(response.content)
-        
+
         # 2. 幻觉检测
         risk = self.hallucination_detector.detect(response.content)
-        
+
         # 3. 如果风险高，添加警告
         if risk > (1 - self.config.wfgy_threshold):
-            warning = f"\n\n[⚠️ 幻觉风险 {risk:.1%}，内容已通过 WFGY 验证]"
+            status = "通过" if wfgy_passed else "未通过"
+            warning = f"\n\n[⚠️ 幻觉风险 {risk:.1%}，WFGY 验证{status}]"
             response.content += warning
-        
+
         return response
-    
+
     def get_event_bus(self) -> EventBus:
         """获取事件总线"""
         return self.event_bus
-    
+
     def get_memory(self) -> SessionMemory:
         """获取记忆"""
         return self.memory
-    
+
     def get_tools(self) -> ToolRegistry:
         """获取工具注册表"""
         return self.tools
@@ -389,7 +426,7 @@ class TaijiAgent:
 async def create_agent(
     provider: str = "anthropic",
     model: str = "claude-sonnet-4-20250514",
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     **kwargs,
 ) -> TaijiAgent:
     """创建 Agent 的便捷函数"""

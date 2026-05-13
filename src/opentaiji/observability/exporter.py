@@ -2,15 +2,16 @@
 Trace Exporters - 追踪数据导出器
 支持Console、File、LangSmith等导出方式
 """
+
 from __future__ import annotations
 
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-import os
+from typing import Any
 
 from .tracing import TraceSpan
 
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 class TraceExporter(ABC):
     @abstractmethod
-    def export(self, spans: List[TraceSpan]) -> None:
+    def export(self, spans: list[TraceSpan]) -> None:
         pass
 
     def flush(self) -> None:
@@ -30,10 +31,10 @@ class ConsoleExporter(TraceExporter):
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
 
-    def export(self, spans: List[TraceSpan]) -> None:
+    def export(self, spans: list[TraceSpan]) -> None:
         for span in spans:
             if self.verbose:
-                print(f"\n{'='*60}")
+                print(f"\n{'=' * 60}")
                 print(f"Span: {span.name}")
                 print(f"Kind: {span.kind.value}")
                 print(f"Duration: {span.duration_ms():.2f}ms")
@@ -64,7 +65,7 @@ class FileExporter(TraceExporter):
         self.format = format
         self.max_file_size = max_file_size_mb * 1024 * 1024
         self.directory.mkdir(parents=True, exist_ok=True)
-        self._current_file: Optional[Path] = None
+        self._current_file: Path | None = None
         self._file_size = 0
 
     def _get_current_file(self) -> Path:
@@ -83,7 +84,7 @@ class FileExporter(TraceExporter):
             self._file_size = 0
         return self._current_file
 
-    def export(self, spans: List[TraceSpan]) -> None:
+    def export(self, spans: list[TraceSpan]) -> None:
         file_path = self._get_current_file()
         with open(file_path, "a", encoding="utf-8") as f:
             if self.format == "jsonl":
@@ -99,20 +100,21 @@ class FileExporter(TraceExporter):
 class LangSmithExporter(TraceExporter):
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         project_name: str = "opentaiji",
         endpoint: str = "https://api.smith.langchain.com",
     ):
         self.api_key = api_key or os.getenv("LANGSMITH_API_KEY")
         self.project_name = project_name
         self.endpoint = endpoint
-        self._client = None
+        self._client: Any | None = None
         if self.api_key:
             self._init_client()
 
     def _init_client(self) -> None:
         try:
             import httpx
+
             self._client = httpx.Client(
                 base_url=self.endpoint,
                 headers={
@@ -124,14 +126,13 @@ class LangSmithExporter(TraceExporter):
         except ImportError:
             logger.warning("httpx not installed, LangSmith export disabled")
 
-    def export(self, spans: List[TraceSpan]) -> None:
+    def export(self, spans: list[TraceSpan]) -> None:
         if not self._client:
             logger.warning("LangSmith client not initialized")
             return
         if not spans:
             return
         try:
-            trace_id = spans[0].trace_id
             for span in spans:
                 self._client.post(
                     "/api/v1/runs",
@@ -141,7 +142,7 @@ class LangSmithExporter(TraceExporter):
         except Exception as e:
             logger.error(f"Failed to export to LangSmith: {e}")
 
-    def _convert_to_langsmith_run(self, span: TraceSpan) -> Dict[str, Any]:
+    def _convert_to_langsmith_run(self, span: TraceSpan) -> dict[str, Any]:
         return {
             "id": span.span_id,
             "trace_id": span.trace_id,
@@ -160,10 +161,10 @@ class LangSmithExporter(TraceExporter):
 
 
 class MultiExporter(TraceExporter):
-    def __init__(self, exporters: List[TraceExporter]):
+    def __init__(self, exporters: list[TraceExporter]):
         self.exporters = exporters
 
-    def export(self, spans: List[TraceSpan]) -> None:
+    def export(self, spans: list[TraceSpan]) -> None:
         for exporter in self.exporters:
             try:
                 exporter.export(spans)

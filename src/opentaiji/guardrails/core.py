@@ -2,14 +2,14 @@
 Guardrails Core - 护栏核心定义
 参考OpenAI Agents SDK Guardrails设计
 """
+
 from __future__ import annotations
 
-import re
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,19 +25,19 @@ class ValidationResult:
     is_valid: bool
     level: ValidationLevel
     message: str
-    details: Dict[str, Any] = field(default_factory=dict)
-    flagged_content: Optional[List[str]] = None
+    details: dict[str, Any] = field(default_factory=dict)
+    flagged_content: list[str] | None = None
 
     @classmethod
-    def pass_result(cls, message: str = "Validation passed", details: Optional[Dict] = None) -> "ValidationResult":
+    def pass_result(cls, message: str = "Validation passed", details: dict | None = None) -> ValidationResult:
         return cls(is_valid=True, level=ValidationLevel.PASS, message=message, details=details or {})
 
     @classmethod
-    def fail_result(cls, message: str, details: Optional[Dict] = None) -> "ValidationResult":
+    def fail_result(cls, message: str, details: dict | None = None) -> ValidationResult:
         return cls(is_valid=False, level=ValidationLevel.FAIL, message=message, details=details or {})
 
     @classmethod
-    def warn_result(cls, message: str, details: Optional[Dict] = None) -> "ValidationResult":
+    def warn_result(cls, message: str, details: dict | None = None) -> ValidationResult:
         return cls(is_valid=True, level=ValidationLevel.WARN, message=message, details=details or {})
 
 
@@ -46,11 +46,11 @@ class GuardrailConfig:
     enabled: bool = True
     strict_mode: bool = False
     fail_fast: bool = True
-    custom_rules: Dict[str, Any] = field(default_factory=dict)
+    custom_rules: dict[str, Any] = field(default_factory=dict)
 
 
 class Guardrail(ABC):
-    def __init__(self, config: Optional[GuardrailConfig] = None):
+    def __init__(self, config: GuardrailConfig | None = None):
         self.config = config or GuardrailConfig()
         self.name = self.__class__.__name__
 
@@ -67,8 +67,8 @@ class Guardrail(ABC):
 class CompositeGuardrail(Guardrail):
     def __init__(
         self,
-        guardrails: List[Guardrail],
-        config: Optional[GuardrailConfig] = None,
+        guardrails: list[Guardrail],
+        config: GuardrailConfig | None = None,
         mode: str = "all",
     ):
         super().__init__(config)
@@ -76,7 +76,7 @@ class CompositeGuardrail(Guardrail):
         self.mode = mode
 
     async def validate(self, text: str) -> ValidationResult:
-        results: List[ValidationResult] = []
+        results: list[ValidationResult] = []
         for guardrail in self.guardrails:
             result = await guardrail(text)
             results.append(result)
@@ -97,10 +97,10 @@ class CompositeGuardrail(Guardrail):
 
 class GuardrailManager:
     def __init__(self):
-        self.input_guardrails: List[Guardrail] = []
-        self.output_guardrails: List[Guardrail] = []
-        self.tool_guardrails: List[Guardrail] = []
-        self._results_history: List[Dict[str, Any]] = []
+        self.input_guardrails: list[Guardrail] = []
+        self.output_guardrails: list[Guardrail] = []
+        self.tool_guardrails: list[Guardrail] = []
+        self._results_history: list[dict[str, Any]] = []
 
     def add_input_guardrail(self, guardrail: Guardrail) -> None:
         self.input_guardrails.append(guardrail)
@@ -127,7 +127,7 @@ class GuardrailManager:
         self._log_result("output", text, result)
         return result
 
-    async def validate_tool_input(self, tool_name: str, arguments: Dict[str, Any]) -> ValidationResult:
+    async def validate_tool_input(self, tool_name: str, arguments: dict[str, Any]) -> ValidationResult:
         if not self.tool_guardrails:
             return ValidationResult.pass_result("No tool guardrails configured")
         composite = CompositeGuardrail(self.tool_guardrails)
@@ -148,7 +148,7 @@ class GuardrailManager:
         if not result.is_valid:
             logger.warning(f"Guardrail failed: {result.message}")
 
-    def get_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_history(self, limit: int = 100) -> list[dict[str, Any]]:
         return self._results_history[-limit:]
 
     def clear_history(self) -> None:

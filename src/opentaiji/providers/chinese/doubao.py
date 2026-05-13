@@ -3,29 +3,30 @@
 """
 
 import os
-from typing import Optional, AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from opentaiji.providers.base import LLMProvider, LLMResponse
 
 
 class DoubaoProvider(LLMProvider):
     """豆包 Provider - 字节跳动火山引擎"""
-    
+
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = "doubao-pro-32k",
         base_url: str = "https://ark.cn-beijing.volces.com/api/v3",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(api_key=api_key, model=model, base_url=base_url, **kwargs)
         self.api_key = api_key or os.getenv("DOUBAO_API_KEY")
         self.client = None
-    
+
     def _get_client(self):
         if self.client is None:
             try:
                 from openai import AsyncOpenAI
+
                 self.client = AsyncOpenAI(
                     api_key=self.api_key,
                     base_url=self.base_url,
@@ -33,34 +34,34 @@ class DoubaoProvider(LLMProvider):
             except ImportError:
                 raise ImportError("openai package not installed")
         return self.client
-    
+
     async def chat(
         self,
         messages: list[dict],
-        tools: Optional[list[dict]] = None,
+        tools: list[dict] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         stream: bool = False,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
         client = self._get_client()
-        
+
         request_params = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
-        
+
         if tools:
             request_params["tools"] = tools
-        
+
         try:
             response = await client.chat.completions.create(**request_params)
-            
+
             choice = response.choices[0]
             message = choice.message
-            
+
             return LLMResponse(
                 content=message.content,
                 tool_calls=[
@@ -79,17 +80,17 @@ class DoubaoProvider(LLMProvider):
             )
         except Exception as e:
             return LLMResponse(content=f"Error: {str(e)}")
-    
+
     async def stream_chat(
         self,
         messages: list[dict],
-        tools: Optional[list[dict]] = None,
+        tools: list[dict] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        **kwargs
+        **kwargs,
     ) -> AsyncGenerator[str, None]:
         client = self._get_client()
-        
+
         request_params = {
             "model": self.model,
             "messages": messages,
@@ -97,15 +98,15 @@ class DoubaoProvider(LLMProvider):
             "max_tokens": max_tokens,
             "stream": True,
         }
-        
+
         if tools:
             request_params["tools"] = tools
-        
+
         stream = await client.chat.completions.create(**request_params)
-        
+
         async for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
-    
+
     def estimate_tokens(self, text: str) -> int:
         return len(text) // 4

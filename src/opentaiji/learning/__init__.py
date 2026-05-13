@@ -4,9 +4,9 @@
 
 from opentaiji.learning.loop import (
     HonchoMemory,
-    SelfImprovingLoop,
-    PeerCard,
     LearnedContext,
+    PeerCard,
+    SelfImprovingLoop,
 )
 
 __all__ = [

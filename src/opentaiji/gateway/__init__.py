@@ -3,22 +3,22 @@
 """
 
 from opentaiji.gateway.core import (
-    MessageGateway,
-    PlatformAdapter,
-    Message,
-    OutgoingMessage,
-    MessagePlatform,
-    create_gateway,
-    TelegramAdapter,
-    DiscordAdapter,
-    WeChatWorkAdapter,
     DingTalkAdapter,
+    DiscordAdapter,
     FeishuAdapter,
+    Message,
+    MessageGateway,
+    MessagePlatform,
+    OutgoingMessage,
+    PlatformAdapter,
+    TelegramAdapter,
+    WeChatWorkAdapter,
+    create_gateway,
 )
 
 __all__ = [
     "MessageGateway",
-    "PlatformAdapter", 
+    "PlatformAdapter",
     "Message",
     "OutgoingMessage",
     "MessagePlatform",

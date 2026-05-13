@@ -2,10 +2,12 @@
 MCP Protocol Core - 协议核心定义
 参考 modelcontextprotocol.io 规范
 """
+
+import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-import json
+from typing import Any
 
 
 class MCPProtocolVersion(str, Enum):
@@ -17,10 +19,10 @@ class MCPProtocolVersion(str, Enum):
 class MCPTool:
     name: str
     description: str
-    input_schema: Dict[str, Any]
-    handler: Optional[Callable] = None
+    input_schema: dict[str, Any]
+    handler: Callable | None = None
 
-    def to_mcp_dict(self) -> Dict[str, Any]:
+    def to_mcp_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -35,7 +37,7 @@ class MCPResource:
     description: str
     mime_type: str = "text/plain"
 
-    def to_mcp_dict(self) -> Dict[str, Any]:
+    def to_mcp_dict(self) -> dict[str, Any]:
         return {
             "uri": self.uri,
             "name": self.name,
@@ -48,9 +50,9 @@ class MCPResource:
 class MCPPrompt:
     name: str
     description: str
-    arguments: List[Dict[str, str]] = field(default_factory=list)
+    arguments: list[dict[str, str]] = field(default_factory=list)
 
-    def to_mcp_dict(self) -> Dict[str, Any]:
+    def to_mcp_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "description": self.description,
@@ -62,13 +64,13 @@ class MCPPrompt:
 class MCPMessage:
     jsonrpc: str = "2.0"
     method: str = ""
-    params: Optional[Dict[str, Any]] = None
-    id: Optional[Any] = None
-    result: Optional[Any] = None
-    error: Optional[Dict[str, Any]] = None
+    params: dict[str, Any] | None = None
+    id: Any | None = None
+    result: Any | None = None
+    error: dict[str, Any] | None = None
 
     def to_json(self) -> str:
-        data = {"jsonrpc": self.jsonrpc}
+        data: dict[str, Any] = {"jsonrpc": self.jsonrpc}
         if self.id is not None:
             data["id"] = self.id
         if self.method:
@@ -125,7 +127,7 @@ class MCPProtocol:
         server_name: str,
         server_version: str,
         protocol_version: str = MCPProtocolVersion.LATEST.value,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {
             "protocolVersion": protocol_version,
             "capabilities": MCPProtocol.CAPABILITIES,
@@ -146,7 +148,7 @@ class MCPProtocol:
     @staticmethod
     def tools_call(
         name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         request_id: Any = None,
     ) -> MCPMessage:
         return MCPMessage(

@@ -2,12 +2,13 @@
 Confidence Gate - 置信度门控
 智能判断是否需要人工审批
 """
+
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class ConfidenceResult:
     level: ConfidenceLevel
     should_auto_approve: bool
     reason: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class ConfidenceGate:
@@ -45,12 +46,10 @@ class ConfidenceGate:
         action_type: str,
         action_description: str,
         risk_level: str,
-        parameters: Dict[str, Any],
-        context: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any],
+        context: dict[str, Any] | None = None,
     ) -> ConfidenceResult:
-        confidence = self._calculate_confidence(
-            action_type, action_description, risk_level, parameters, context
-        )
+        confidence = self._calculate_confidence(action_type, action_description, risk_level, parameters, context)
         level = self._get_level(confidence)
         should_auto = self._should_auto_approve(level, risk_level)
         reason = self._get_reason(confidence, level, risk_level)
@@ -74,8 +73,8 @@ class ConfidenceGate:
         action_type: str,
         action_description: str,
         risk_level: str,
-        parameters: Dict[str, Any],
-        context: Optional[Dict[str, Any]],
+        parameters: dict[str, Any],
+        context: dict[str, Any] | None,
     ) -> float:
         base_confidence = 0.8
         if risk_level == "low":
@@ -84,9 +83,9 @@ class ConfidenceGate:
             base_confidence -= 0.2
         if context:
             historical_success = context.get("historical_success_rate", 0.5)
-            base_confidence *= (0.5 + historical_success)
+            base_confidence *= 0.5 + historical_success
             user_trust_score = context.get("user_trust_score", 0.5)
-            base_confidence *= (0.5 + user_trust_score)
+            base_confidence *= 0.5 + user_trust_score
         safe_action_types = {"query", "search", "read", "get", "list", "view"}
         if action_type.lower() in safe_action_types:
             base_confidence += 0.05
@@ -133,11 +132,9 @@ class ConfidenceGate:
         action_type: str,
         action_description: str,
         risk_level: str,
-        parameters: Dict[str, Any],
-        context: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any],
+        context: dict[str, Any] | None = None,
     ) -> tuple[bool, ConfidenceResult]:
-        result = self.evaluate(
-            action_type, action_description, risk_level, parameters, context
-        )
+        result = self.evaluate(action_type, action_description, risk_level, parameters, context)
         should_request = not result.should_auto_approve
         return should_request, result

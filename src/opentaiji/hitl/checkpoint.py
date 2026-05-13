@@ -2,16 +2,17 @@
 Checkpoint Manager - 断点恢复系统
 支持工作流暂停和恢复
 """
+
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +29,14 @@ class Checkpoint:
     checkpoint_id: str
     workflow_id: str
     step_name: str
-    state: Dict[str, Any]
+    state: dict[str, Any]
     created_at: datetime
     status: CheckpointStatus = CheckpointStatus.ACTIVE
-    parent_checkpoint_id: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    parent_checkpoint_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     version: int = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "checkpoint_id": self.checkpoint_id,
             "workflow_id": self.workflow_id,
@@ -49,7 +50,7 @@ class Checkpoint:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Checkpoint":
+    def from_dict(cls, data: dict[str, Any]) -> Checkpoint:
         return cls(
             checkpoint_id=data["checkpoint_id"],
             workflow_id=data["workflow_id"],
@@ -66,15 +67,15 @@ class Checkpoint:
 class CheckpointManager:
     def __init__(
         self,
-        storage_path: Optional[str] = None,
+        storage_path: str | None = None,
         auto_save: bool = True,
         max_checkpoints: int = 100,
     ):
         self.storage_path = Path(storage_path) if storage_path else Path("./checkpoints")
         self.auto_save = auto_save
         self.max_checkpoints = max_checkpoints
-        self._checkpoints: Dict[str, Checkpoint] = {}
-        self._workflow_checkpoints: Dict[str, List[str]] = {}
+        self._checkpoints: dict[str, Checkpoint] = {}
+        self._workflow_checkpoints: dict[str, list[str]] = {}
         if self.auto_save:
             self.storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -82,9 +83,9 @@ class CheckpointManager:
         self,
         workflow_id: str,
         step_name: str,
-        state: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
-        parent_checkpoint_id: Optional[str] = None,
+        state: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+        parent_checkpoint_id: str | None = None,
     ) -> Checkpoint:
         checkpoint = Checkpoint(
             checkpoint_id=str(uuid.uuid4()),
@@ -137,10 +138,10 @@ class CheckpointManager:
         logger.info(f"Checkpoint completed: {checkpoint_id}")
         return checkpoint
 
-    def get(self, checkpoint_id: str) -> Optional[Checkpoint]:
+    def get(self, checkpoint_id: str) -> Checkpoint | None:
         return self._checkpoints.get(checkpoint_id)
 
-    def get_latest(self, workflow_id: str) -> Optional[Checkpoint]:
+    def get_latest(self, workflow_id: str) -> Checkpoint | None:
         if workflow_id not in self._workflow_checkpoints:
             return None
         checkpoint_ids = self._workflow_checkpoints[workflow_id]
@@ -148,16 +149,12 @@ class CheckpointManager:
             return None
         return self._checkpoints.get(checkpoint_ids[-1])
 
-    def get_history(self, workflow_id: str) -> List[Checkpoint]:
+    def get_history(self, workflow_id: str) -> list[Checkpoint]:
         if workflow_id not in self._workflow_checkpoints:
             return []
-        return [
-            self._checkpoints[cid]
-            for cid in self._workflow_checkpoints[workflow_id]
-            if cid in self._checkpoints
-        ]
+        return [self._checkpoints[cid] for cid in self._workflow_checkpoints[workflow_id] if cid in self._checkpoints]
 
-    def restore(self, checkpoint_id: str) -> Dict[str, Any]:
+    def restore(self, checkpoint_id: str) -> dict[str, Any]:
         checkpoint = self.get(checkpoint_id)
         if not checkpoint:
             raise ValueError(f"Checkpoint not found: {checkpoint_id}")
@@ -180,11 +177,11 @@ class CheckpointManager:
                 if checkpoint_id in ids:
                     ids.remove(checkpoint_id)
 
-    def load_from_disk(self, workflow_id: str) -> List[Checkpoint]:
+    def load_from_disk(self, workflow_id: str) -> list[Checkpoint]:
         checkpoints = []
         for file_path in self.storage_path.glob(f"{workflow_id}_*.json"):
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
                     checkpoint = Checkpoint.from_dict(data)
                     checkpoints.append(checkpoint)

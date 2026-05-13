@@ -4,9 +4,9 @@
 
 from opentaiji.skills.hub import (
     Skill,
+    SkillCreator,
     SkillManager,
     SkillMarket,
-    SkillCreator,
 )
 
 __all__ = [

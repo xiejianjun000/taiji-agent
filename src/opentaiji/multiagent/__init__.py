@@ -3,16 +3,16 @@
 """
 
 from opentaiji.multiagent.coordinator import (
-    AgentRole,
-    CoordinationMode,
-    AgentMessage,
-    AgentTask,
     AgentCapability,
-    BaseAgent,
-    TaijiAgent,
-    MultiAgentCoordinator,
+    AgentMessage,
+    AgentRole,
     AgentSwarm,
+    AgentTask,
+    BaseAgent,
+    CoordinationMode,
     MessageBus,
+    MultiAgentCoordinator,
+    TaijiAgent,
 )
 
 __all__ = [

@@ -2,6 +2,7 @@
 Handoffs Core - 智能体交接核心
 参考OpenAI Agents SDK Handoffs设计
 """
+
 from __future__ import annotations
 
 import logging
@@ -9,12 +10,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from ..agent.engine import TaijiAgent
+    pass
 
 
 class HandoffDecision(str, Enum):
@@ -40,18 +41,18 @@ class HandoffResult:
     transferred_at: datetime
     context_summary: str
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
 class HandoffContext:
     user_intent: str
     current_task: str
-    completed_steps: List[str] = field(default_factory=list)
-    pending_tasks: List[str] = field(default_factory=list)
-    relevant_history: List[Dict[str, Any]] = field(default_factory=list)
-    session_data: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    completed_steps: list[str] = field(default_factory=list)
+    pending_tasks: list[str] = field(default_factory=list)
+    relevant_history: list[dict[str, Any]] = field(default_factory=list)
+    session_data: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Handoff(ABC):
@@ -60,7 +61,7 @@ class Handoff(ABC):
         name: str,
         description: str,
         agent: Any,
-        config: Optional[HandoffConfig] = None,
+        config: HandoffConfig | None = None,
     ):
         self.name = name
         self.description = description
@@ -79,7 +80,7 @@ class Handoff(ABC):
     async def prepare_handoff(
         self,
         context: HandoffContext,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         pass
 
     @abstractmethod
@@ -97,11 +98,11 @@ class Handoff(ABC):
 
 
 class HandoffManager:
-    def __init__(self, config: Optional[HandoffConfig] = None):
+    def __init__(self, config: HandoffConfig | None = None):
         self.config = config or HandoffConfig()
-        self._handoffs: Dict[str, Handoff] = {}
-        self._handoff_history: List[HandoffResult] = []
-        self._current_agent: Optional[str] = None
+        self._handoffs: dict[str, Handoff] = {}
+        self._handoff_history: list[HandoffResult] = []
+        self._current_agent: str | None = None
 
     def register(self, handoff: Handoff) -> None:
         self._handoffs[handoff.name] = handoff
@@ -112,17 +113,17 @@ class HandoffManager:
             del self._handoffs[name]
             logger.info(f"Handoff unregistered: {name}")
 
-    def get(self, name: str) -> Optional[Handoff]:
+    def get(self, name: str) -> Handoff | None:
         return self._handoffs.get(name)
 
-    def list_handoffs(self) -> List[Handoff]:
+    def list_handoffs(self) -> list[Handoff]:
         return list(self._handoffs.values())
 
     async def evaluate_handoffs(
         self,
         context: HandoffContext,
         current_agent: str,
-    ) -> List[tuple[Handoff, float, bool]]:
+    ) -> list[tuple[Handoff, float, bool]]:
         candidates = []
         for name, handoff in self._handoffs.items():
             if name == current_agent:
@@ -143,7 +144,7 @@ class HandoffManager:
         source = self._handoffs.get(from_agent)
         target = self._handoffs.get(to_agent)
         if not source or not target:
-            error = f"Handoff failed: agent not found"
+            error = "Handoff failed: agent not found"
             logger.error(error)
             return HandoffResult(
                 source_agent=from_agent,
@@ -183,13 +184,13 @@ class HandoffManager:
                 error=error,
             )
 
-    def get_history(self, limit: int = 100) -> List[HandoffResult]:
+    def get_history(self, limit: int = 100) -> list[HandoffResult]:
         return self._handoff_history[-limit:]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         total = len(self._handoff_history)
         successful = sum(1 for r in self._handoff_history if r.success)
-        by_agent: Dict[str, int] = {}
+        by_agent: dict[str, int] = {}
         for result in self._handoff_history:
             by_agent[result.target_agent] = by_agent.get(result.target_agent, 0) + 1
         return {

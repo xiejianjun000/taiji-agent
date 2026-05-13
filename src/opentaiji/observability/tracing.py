@@ -2,23 +2,24 @@
 Tracing Core - 追踪核心
 参考LangSmith全链路追踪设计
 """
+
 from __future__ import annotations
 
+import logging
 import time
 import uuid
-import logging
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-from contextvars import ContextVar
 from contextlib import asynccontextmanager
-import json
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .exporter import TraceExporter
 
 logger = logging.getLogger(__name__)
 
-trace_context: ContextVar[Optional[str]] = ContextVar("trace_context", default=None)
+trace_context: ContextVar[str | None] = ContextVar("trace_context", default=None)
 
 
 class SpanKind(str, Enum):
@@ -45,21 +46,21 @@ class TraceSpan:
     name: str
     kind: SpanKind
     start_time: float
-    end_time: Optional[float] = None
+    end_time: float | None = None
     status: SpanStatus = SpanStatus.OK
-    error_message: Optional[str] = None
-    attributes: Dict[str, Any] = field(default_factory=dict)
-    events: List[TraceEvent] = field(default_factory=list)
-    parent_span_id: Optional[str] = None
-    inputs: Optional[Dict[str, Any]] = None
-    outputs: Optional[Dict[str, Any]] = None
+    error_message: str | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
+    events: list[TraceEvent] = field(default_factory=list)
+    parent_span_id: str | None = None
+    inputs: dict[str, Any] | None = None
+    outputs: dict[str, Any] | None = None
 
     def duration_ms(self) -> float:
         if self.end_time:
             return (self.end_time - self.start_time) * 1000
         return (time.time() - self.start_time) * 1000
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "span_id": self.span_id,
             "trace_id": self.trace_id,
@@ -82,9 +83,9 @@ class TraceSpan:
 class TraceEvent:
     name: str
     timestamp: float
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "timestamp": self.timestamp,
@@ -94,27 +95,27 @@ class TraceEvent:
 
 class TraceSpanContext:
     def __init__(self):
-        self._current_span: Optional[TraceSpan] = None
-        self._span_stack: List[TraceSpan] = []
+        self._current_span: TraceSpan | None = None
+        self._span_stack: list[TraceSpan] = []
 
     def set_current_span(self, span: TraceSpan) -> None:
         self._current_span = span
 
-    def get_current_span(self) -> Optional[TraceSpan]:
+    def get_current_span(self) -> TraceSpan | None:
         return self._current_span
 
     def push_span(self, span: TraceSpan) -> None:
         self._span_stack.append(span)
         self._current_span = span
 
-    def pop_span(self) -> Optional[TraceSpan]:
+    def pop_span(self) -> TraceSpan | None:
         if self._span_stack:
             popped = self._span_stack.pop()
             self._current_span = self._span_stack[-1] if self._span_stack else None
             return popped
         return None
 
-    def get_trace_id(self) -> Optional[str]:
+    def get_trace_id(self) -> str | None:
         if self._span_stack:
             return self._span_stack[0].trace_id
         return None
@@ -125,11 +126,11 @@ _span_context = TraceSpanContext()
 
 class TracingManager:
     def __init__(self):
-        self._spans: Dict[str, TraceSpan] = {}
-        self._exporters: List[TraceExporter] = []
+        self._spans: dict[str, TraceSpan] = {}
+        self._exporters: list[TraceExporter] = []
         self._enabled = True
-        self._project_name: Optional[str] = None
-        self._metadata: Dict[str, Any] = {}
+        self._project_name: str | None = None
+        self._metadata: dict[str, Any] = {}
 
     def add_exporter(self, exporter: TraceExporter) -> None:
         self._exporters.append(exporter)
@@ -150,12 +151,13 @@ class TracingManager:
         self,
         name: str,
         kind: SpanKind = SpanKind.AGENT,
-        attributes: Optional[Dict[str, Any]] = None,
-        parent_span_id: Optional[str] = None,
-        inputs: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
+        parent_span_id: str | None = None,
+        inputs: dict[str, Any] | None = None,
     ) -> TraceSpan:
         trace_id = _span_context.get_trace_id() or str(uuid.uuid4())
         span_id = str(uuid.uuid4())[:16]
+        current = _span_context.get_current_span()
         span = TraceSpan(
             span_id=span_id,
             trace_id=trace_id,
@@ -163,10 +165,7 @@ class TracingManager:
             kind=kind,
             start_time=time.time(),
             attributes=attributes or {},
-            parent_span_id=parent_span_id or (
-                _span_context.get_current_span().span_id
-                if _span_context.get_current_span() else None
-            ),
+            parent_span_id=parent_span_id or (current.span_id if current else None),
             inputs=inputs,
         )
         self._spans[span_id] = span
@@ -177,8 +176,8 @@ class TracingManager:
         self,
         span: TraceSpan,
         status: SpanStatus = SpanStatus.OK,
-        outputs: Optional[Dict[str, Any]] = None,
-        error: Optional[str] = None,
+        outputs: dict[str, Any] | None = None,
+        error: str | None = None,
     ) -> None:
         span.end_time = time.time()
         span.status = status
@@ -192,7 +191,7 @@ class TracingManager:
     def add_event(
         self,
         name: str,
-        attributes: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
     ) -> None:
         span = _span_context.get_current_span()
         if span:
@@ -208,14 +207,16 @@ class TracingManager:
         if span:
             span.status = SpanStatus.ERROR
             span.error_message = str(exception)
-            span.events.append(TraceEvent(
-                name="exception",
-                timestamp=time.time(),
-                attributes={
-                    "exception.type": type(exception).__name__,
-                    "exception.message": str(exception),
-                },
-            ))
+            span.events.append(
+                TraceEvent(
+                    name="exception",
+                    timestamp=time.time(),
+                    attributes={
+                        "exception.type": type(exception).__name__,
+                        "exception.message": str(exception),
+                    },
+                )
+            )
 
     def _export_span(self, span: TraceSpan) -> None:
         for exporter in self._exporters:
@@ -224,26 +225,22 @@ class TracingManager:
             except Exception as e:
                 logger.error(f"Failed to export span: {e}")
 
-    def get_trace(self, trace_id: str) -> List[TraceSpan]:
+    def get_trace(self, trace_id: str) -> list[TraceSpan]:
         return [s for s in self._spans.values() if s.trace_id == trace_id]
 
-    def get_trace_tree(self, trace_id: str) -> Dict[str, Any]:
+    def get_trace_tree(self, trace_id: str) -> dict[str, Any]:
         spans = self.get_trace(trace_id)
         if not spans:
             return {}
         root_span = next((s for s in spans if s.parent_span_id is None), spans[0])
-        span_map = {s.span_id: s for s in spans}
 
-        def build_tree(span: TraceSpan) -> Dict[str, Any]:
-            children = [
-                build_tree(s)
-                for s in spans
-                if s.parent_span_id == span.span_id
-            ]
+        def build_tree(span: TraceSpan) -> dict[str, Any]:
+            children = [build_tree(s) for s in spans if s.parent_span_id == span.span_id]
             return {
                 **span.to_dict(),
                 "children": children,
             }
+
         return build_tree(root_span)
 
     @asynccontextmanager
@@ -251,8 +248,8 @@ class TracingManager:
         self,
         name: str,
         kind: SpanKind = SpanKind.AGENT,
-        attributes: Optional[Dict[str, Any]] = None,
-        inputs: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
+        inputs: dict[str, Any] | None = None,
     ):
         span = self.start_span(name, kind, attributes, inputs=inputs)
         try:
@@ -263,11 +260,11 @@ class TracingManager:
             self.end_span(span, SpanStatus.ERROR)
             raise
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         total_spans = len(self._spans)
         error_count = sum(1 for s in self._spans.values() if s.status == SpanStatus.ERROR)
         avg_duration = sum(s.duration_ms() for s in self._spans.values()) / total_spans if total_spans > 0 else 0
-        spans_by_kind: Dict[str, int] = {}
+        spans_by_kind: dict[str, int] = {}
         for span in self._spans.values():
             kind = span.kind.value
             spans_by_kind[kind] = spans_by_kind.get(kind, 0) + 1

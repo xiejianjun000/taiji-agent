@@ -2,12 +2,13 @@
 Agent Registry - Agent注册表
 管理多Agent注册和发现
 """
+
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Type
 import uuid
+from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +19,14 @@ class AgentMetadata:
     name: str
     role: str
     description: str
-    capabilities: List[str] = field(default_factory=list)
-    languages: List[str] = field(default_factory=list)
-    tags: List[str] = field(default_factory=list)
-    custom_data: Dict[str, Any] = field(default_factory=dict)
+    capabilities: list[str] = field(default_factory=list)
+    languages: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    custom_data: dict[str, Any] = field(default_factory=dict)
 
 
 class AgentRegistry:
-    _instance: Optional["AgentRegistry"] = None
+    _instance: AgentRegistry | None = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -36,10 +37,10 @@ class AgentRegistry:
     def __init__(self):
         if self._initialized:
             return
-        self._agents: Dict[str, Any] = {}
-        self._metadata: Dict[str, AgentMetadata] = {}
-        self._role_index: Dict[str, List[str]] = {}
-        self._tag_index: Dict[str, List[str]] = {}
+        self._agents: dict[str, Any] = {}
+        self._metadata: dict[str, AgentMetadata] = {}
+        self._role_index: dict[str, list[str]] = {}
+        self._tag_index: dict[str, list[str]] = {}
         self._initialized = True
 
     def register(
@@ -48,9 +49,9 @@ class AgentRegistry:
         name: str,
         role: str,
         description: str = "",
-        capabilities: Optional[List[str]] = None,
-        languages: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        capabilities: list[str] | None = None,
+        languages: list[str] | None = None,
+        tags: list[str] | None = None,
         **custom_data,
     ) -> str:
         agent_id = str(uuid.uuid4())[:8]
@@ -90,46 +91,38 @@ class AgentRegistry:
         logger.info(f"Agent unregistered: {agent_id}")
         return True
 
-    def get(self, agent_id: str) -> Optional[Any]:
+    def get(self, agent_id: str) -> Any | None:
         return self._agents.get(agent_id)
 
-    def get_by_name(self, name: str) -> Optional[Any]:
+    def get_by_name(self, name: str) -> Any | None:
         for agent_id, metadata in self._metadata.items():
             if metadata.name == name:
                 return self._agents.get(agent_id)
         return None
 
-    def find_by_role(self, role: str) -> List[tuple[str, Any, AgentMetadata]]:
+    def find_by_role(self, role: str) -> list[tuple[str, Any, AgentMetadata]]:
         agent_ids = self._role_index.get(role, [])
-        return [
-            (aid, self._agents[aid], self._metadata[aid])
-            for aid in agent_ids
-            if aid in self._agents
-        ]
+        return [(aid, self._agents[aid], self._metadata[aid]) for aid in agent_ids if aid in self._agents]
 
-    def find_by_tag(self, tag: str) -> List[tuple[str, Any, AgentMetadata]]:
+    def find_by_tag(self, tag: str) -> list[tuple[str, Any, AgentMetadata]]:
         agent_ids = self._tag_index.get(tag, [])
-        return [
-            (aid, self._agents[aid], self._metadata[aid])
-            for aid in agent_ids
-            if aid in self._agents
-        ]
+        return [(aid, self._agents[aid], self._metadata[aid]) for aid in agent_ids if aid in self._agents]
 
-    def find_by_capability(self, capability: str) -> List[tuple[str, Any, AgentMetadata]]:
+    def find_by_capability(self, capability: str) -> list[tuple[str, Any, AgentMetadata]]:
         results = []
         for agent_id, metadata in self._metadata.items():
             if capability in metadata.capabilities:
                 results.append((agent_id, self._agents[agent_id], metadata))
         return results
 
-    def find_by_language(self, language: str) -> List[tuple[str, Any, AgentMetadata]]:
+    def find_by_language(self, language: str) -> list[tuple[str, Any, AgentMetadata]]:
         results = []
         for agent_id, metadata in self._metadata.items():
             if language in metadata.languages:
                 results.append((agent_id, self._agents[agent_id], metadata))
         return results
 
-    def search(self, query: str) -> List[tuple[str, Any, AgentMetadata]]:
+    def search(self, query: str) -> list[tuple[str, Any, AgentMetadata]]:
         query_lower = query.lower()
         results = []
         for agent_id, agent in self._agents.items():
@@ -144,17 +137,14 @@ class AgentRegistry:
                 results.append((agent_id, agent, metadata))
         return results
 
-    def list_all(self) -> List[tuple[str, Any, AgentMetadata]]:
-        return [
-            (aid, agent, self._metadata[aid])
-            for aid, agent in self._agents.items()
-        ]
+    def list_all(self) -> list[tuple[str, Any, AgentMetadata]]:
+        return [(aid, agent, self._metadata[aid]) for aid, agent in self._agents.items()]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         total = len(self._agents)
-        roles: Dict[str, int] = {}
-        tags: Dict[str, int] = {}
-        capabilities: Dict[str, int] = {}
+        roles: dict[str, int] = {}
+        tags: dict[str, int] = {}
+        capabilities: dict[str, int] = {}
         for metadata in self._metadata.values():
             roles[metadata.role] = roles.get(metadata.role, 0) + 1
             for tag in metadata.tags:

@@ -2,17 +2,18 @@
 Code Executor - 代码执行器
 参考SmolAgents安全代码执行设计
 """
+
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
+import sys
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
-import sys
-import io
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,9 @@ class ExecutionResult:
     execution_id: str
     status: ExecutionStatus
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     execution_time_ms: float = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_success(self) -> bool:
         return self.status == ExecutionStatus.SUCCESS
@@ -41,27 +42,35 @@ class ExecutionResult:
 class SandboxConfig:
     timeout_seconds: int = 30
     max_memory_mb: int = 256
-    allowed_modules: List[str] = field(default_factory=list)
-    blocked_modules: List[str] = field(default_factory=lambda: [
-        "os", "subprocess", "socket", "requests", "urllib",
-        "ctypes", "sys", "builtins",
-    ])
+    allowed_modules: list[str] = field(default_factory=list)
+    blocked_modules: list[str] = field(
+        default_factory=lambda: [
+            "os",
+            "subprocess",
+            "socket",
+            "requests",
+            "urllib",
+            "ctypes",
+            "sys",
+            "builtins",
+        ]
+    )
     allow_network: bool = False
     allow_file_write: bool = False
     max_output_length: int = 10000
 
 
 class CodeExecutor:
-    def __init__(self, config: Optional[SandboxConfig] = None):
+    def __init__(self, config: SandboxConfig | None = None):
         self.config = config or SandboxConfig()
         self._execution_count = 0
-        self._history: List[ExecutionResult] = []
+        self._history: list[ExecutionResult] = []
 
     async def execute(
         self,
         code: str,
         language: str = "python",
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> ExecutionResult:
         execution_id = str(uuid.uuid4())[:12]
         self._execution_count += 1
@@ -80,7 +89,7 @@ class CodeExecutor:
                     output="",
                     error=f"Unsupported language: {language}",
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             result = ExecutionResult(
                 execution_id=execution_id,
                 status=ExecutionStatus.TIMEOUT,
@@ -103,12 +112,18 @@ class CodeExecutor:
     async def _execute_python(
         self,
         code: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> ExecutionResult:
         forbidden_patterns = [
-            "import os", "import sys", "import subprocess",
-            "import ctypes", "import socket", "__import__",
-            "exec(", "eval(", "compile(",
+            "import os",
+            "import sys",
+            "import subprocess",
+            "import ctypes",
+            "import socket",
+            "__import__",
+            "exec(",
+            "eval(",
+            "compile(",
         ]
         for pattern in forbidden_patterns:
             if pattern in code:
@@ -120,7 +135,7 @@ class CodeExecutor:
                 )
         stdout_capture = io.StringIO()
         stderr_capture = io.StringIO()
-        local_vars = {}
+        local_vars: dict[str, Any] = {}
         try:
             loop = asyncio.get_event_loop()
             async_function = loop.run_in_executor(
@@ -135,7 +150,7 @@ class CodeExecutor:
                 async_function,
                 timeout=self.config.timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ExecutionResult(
                 execution_id=context.get("_execution_id", ""),
                 status=ExecutionStatus.TIMEOUT,
@@ -154,14 +169,14 @@ class CodeExecutor:
         return ExecutionResult(
             execution_id=context.get("_execution_id", ""),
             status=ExecutionStatus.SUCCESS,
-            output=output[:self.config.max_output_length],
+            output=output[: self.config.max_output_length],
             metadata={"return_value": result},
         )
 
     def _run_python_code(
         self,
         code: str,
-        local_vars: Dict[str, Any],
+        local_vars: dict[str, Any],
         stdout: io.StringIO,
         stderr: io.StringIO,
     ) -> Any:
@@ -182,7 +197,7 @@ class CodeExecutor:
     async def _execute_javascript(
         self,
         code: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> ExecutionResult:
         return ExecutionResult(
             execution_id=context.get("_execution_id", ""),
@@ -191,10 +206,10 @@ class CodeExecutor:
             error="JavaScript execution requires Node.js sandbox",
         )
 
-    def get_history(self, limit: int = 100) -> List[ExecutionResult]:
+    def get_history(self, limit: int = 100) -> list[ExecutionResult]:
         return self._history[-limit:]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         total = len(self._history)
         success_count = sum(1 for r in self._history if r.is_success())
         avg_time = sum(r.execution_time_ms for r in self._history) / total if total > 0 else 0
@@ -209,20 +224,20 @@ class CodeExecutor:
 
 class SandboxManager:
     def __init__(self):
-        self._sandboxes: Dict[str, SandboxConfig] = {}
-        self._active_sessions: Dict[str, bool] = {}
+        self._sandboxes: dict[str, SandboxConfig] = {}
+        self._active_sessions: dict[str, bool] = {}
 
     def create_sandbox(
         self,
         name: str,
-        config: Optional[SandboxConfig] = None,
+        config: SandboxConfig | None = None,
     ) -> str:
         sandbox_id = str(uuid.uuid4())[:8]
         self._sandboxes[sandbox_id] = config or SandboxConfig()
         logger.info(f"Sandbox created: {sandbox_id} ({name})")
         return sandbox_id
 
-    def get_sandbox(self, sandbox_id: str) -> Optional[SandboxConfig]:
+    def get_sandbox(self, sandbox_id: str) -> SandboxConfig | None:
         return self._sandboxes.get(sandbox_id)
 
     def destroy_sandbox(self, sandbox_id: str) -> bool:
@@ -233,6 +248,6 @@ class SandboxManager:
             return True
         return False
 
-    def create_executor(self, sandbox_id: Optional[str] = None) -> CodeExecutor:
+    def create_executor(self, sandbox_id: str | None = None) -> CodeExecutor:
         config = self._sandboxes.get(sandbox_id) if sandbox_id else None
         return CodeExecutor(config)
