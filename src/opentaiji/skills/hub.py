@@ -450,9 +450,7 @@ class SkillManager:
         skills = list(self._skills.values())
         return {
             "total": len(skills),
-            "by_category": {
-                cat: len([s for s in skills if s.category == cat]) for cat in {s.category for s in skills}
-            },
+            "by_category": {cat: len([s for s in skills if s.category == cat]) for cat in {s.category for s in skills}},
             "auto_created": len([s for s in skills if s.auto_created]),
             "total_usage": sum(s.usage_count for s in skills),
             "avg_confidence": sum(s.confidence for s in skills) / len(skills) if skills else 0,
