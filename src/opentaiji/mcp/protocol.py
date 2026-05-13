@@ -6,11 +6,11 @@ MCP Protocol Core - 协议核心定义
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class MCPProtocolVersion(str, Enum):
+class MCPProtocolVersion(StrEnum):
     LATEST = "2025-03-26"
     V1 = "2024-11-05"
 

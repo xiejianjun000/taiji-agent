@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class NodeType(str, Enum):
+class NodeType(StrEnum):
     AGENT = "agent"
     TOOL = "tool"
     LLM = "llm"

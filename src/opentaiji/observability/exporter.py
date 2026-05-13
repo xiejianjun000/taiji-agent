@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 class TraceExporter(ABC):
     @abstractmethod
     def export(self, spans: list[TraceSpan]) -> None:
-        pass
+        raise NotImplementedError
 
     def flush(self) -> None:
-        pass
+        raise NotImplementedError
 
 
 class ConsoleExporter(TraceExporter):

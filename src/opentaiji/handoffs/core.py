@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     pass
 
 
-class HandoffDecision(str, Enum):
+class HandoffDecision(StrEnum):
     STAY = "stay"
     TRANSFER = "transfer"
     COLLABORATE = "collaborate"

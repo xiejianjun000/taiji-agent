@@ -11,7 +11,7 @@ import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 trace_context: ContextVar[str | None] = ContextVar("trace_context", default=None)
 
 
-class SpanKind(str, Enum):
+class SpanKind(StrEnum):
     AGENT = "agent"
     TOOL = "tool"
     LLM = "llm"
@@ -32,7 +32,7 @@ class SpanKind(str, Enum):
     GUARDRAIL = "guardrail"
 
 
-class SpanStatus(str, Enum):
+class SpanStatus(StrEnum):
     OK = "ok"
     ERROR = "error"
     TIMEOUT = "timeout"

@@ -12,13 +12,13 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     SUCCESS = "success"
     ERROR = "error"
     TIMEOUT = "timeout"

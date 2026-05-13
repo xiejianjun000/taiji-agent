@@ -10,13 +10,13 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     MERMAID = "mermaid"
     MERMAID_FLOWCHART = "mermaid_flowchart"
     MERMAID_SEQUENCE = "mermaid_sequence"

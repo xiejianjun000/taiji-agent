@@ -11,13 +11,13 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -25,7 +25,7 @@ class ApprovalStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class ApprovalDecision(str, Enum):
+class ApprovalDecision(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
     MODIFY = "modify"

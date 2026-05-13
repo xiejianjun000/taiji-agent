@@ -24,8 +24,8 @@ class AnthropicProvider(LLMProvider):
                 from anthropic import AsyncAnthropic
 
                 self.client = AsyncAnthropic(api_key=self.api_key)
-            except ImportError:
-                raise ImportError("anthropic package not installed: pip install anthropic")
+            except ImportError as e:
+                raise ImportError("anthropic package not installed: pip install anthropic") from e
         return self.client
 
     async def chat(

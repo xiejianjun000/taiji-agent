@@ -10,14 +10,14 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class CheckpointStatus(str, Enum):
+class CheckpointStatus(StrEnum):
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETED = "completed"
@@ -173,7 +173,7 @@ class CheckpointManager:
             if file_path.exists():
                 file_path.unlink()
             del self._checkpoints[checkpoint_id]
-            for workflow_id, ids in self._workflow_checkpoints.items():
+            for _workflow_id, ids in self._workflow_checkpoints.items():
                 if checkpoint_id in ids:
                     ids.remove(checkpoint_id)
 

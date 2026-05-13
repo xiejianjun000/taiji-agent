@@ -31,8 +31,8 @@ class KimiProvider(LLMProvider):
                     api_key=self.api_key,
                     base_url=self.base_url,
                 )
-            except ImportError:
-                raise ImportError("openai package not installed")
+            except ImportError as e:
+                raise ImportError("openai package not installed") from e
         return self.client
 
     async def chat(

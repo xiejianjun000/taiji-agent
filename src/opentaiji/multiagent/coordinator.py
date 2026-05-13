@@ -136,9 +136,10 @@ class BaseAgent(ABC):
                 await self._handle_message(message)
             await asyncio.sleep(0.1)
 
-    async def _handle_message(self, message: AgentMessage):
-        """处理消息"""
-        pass
+    @abstractmethod
+    async def _handle_message(self, message: AgentMessage) -> None:
+        """处理消息 - 子类需要实现"""
+        raise NotImplementedError
 
 
 class TaijiAgent(BaseAgent):
@@ -169,6 +170,10 @@ class TaijiAgent(BaseAgent):
         self.max_iterations = max_iterations
 
         self._core_agent = CoreAgent(config=self.config)
+
+    async def _handle_message(self, message: AgentMessage) -> None:
+        """处理消息"""
+        pass
 
     async def process(self, task: AgentTask) -> Any:
         """处理任务"""
@@ -418,7 +423,7 @@ class MultiAgentCoordinator:
                 return_exceptions=True,
             )
 
-            for agent, statement in zip(agents, round_statements):
+            for agent, statement in zip(agents, round_statements, strict=True):
                 if isinstance(statement, Exception):
                     logger.error(f"Agent {agent.agent_id} debate error: {statement}")
                     continue
@@ -464,7 +469,7 @@ class MultiAgentCoordinator:
 
         votes = dict.fromkeys(range(len(agents)), 0)
 
-        for i, agent in enumerate(agents):
+        for i, _agent in enumerate(agents):
             agent_proposal = proposals[i]
             if isinstance(agent_proposal, Exception):
                 continue

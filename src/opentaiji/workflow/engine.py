@@ -228,7 +228,7 @@ class WorkflowEngine:
             lines.append(f"    {node}[({node})]")
         for source, target in self._edges.items():
             lines.append(f"    {source} --> {target}")
-        for source, router in self._conditional_edges.items():
+        for source, _router in self._conditional_edges.items():
             lines.append(f"    {source} -.-> {source}_router")
             lines.append(f"    {source}_router{{Router}}")
         return "\n".join(lines)
