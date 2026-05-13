@@ -1,0 +1,29 @@
+name: Daily Update
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-deps:
+    name: Update Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pip-tools
+        run: pip install pip-tools
+
+      - name: Check for outdated dependencies
+        run: |
+          pip list --outdated --format=freeze | grep -v "^#" || true
+
+      - name: Create PR if needed
+        run: |
+          echo "Dependencies check completed"

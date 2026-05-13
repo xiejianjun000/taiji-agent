@@ -5,6 +5,12 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/xiejianjun000/open-taiji/actions/workflows/ci.yml/badge.svg)](https://github.com/xiejianjun000/open-taiji/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/xiejianjun000/open-taiji/branch/main/graph/badge.svg)](https://codecov.io/gh/xiejianjun000/open-taiji)
+[![CodeFactor](https://www.codefactor.io/repository/github/xiejianjun000/open-taiji/badge/main)](https://www.codefactor.io/repository/github/xiejianjun000/open-taiji/overview/main)
+[![PyPI version](https://badge.fury.io/py/opentaiji.svg)](https://badge.fury.io/py/opentaiji)
+[![Downloads](https://static.pepy.tech/badge/opentaiji)](https://pepy.tech/project/opentaiji)
+[![GitHub Stars](https://img.shields.io/github/stars/xiejianjun000/open-taiji?style=social)](https://github.com/xiejianjun000/open-taiji/stargazers)
 
 > 太极生两仪，两仪生四象，四象生八卦。
 > 开源 AI Agent 框架，融合多框架精华，专注防幻觉与可靠性。

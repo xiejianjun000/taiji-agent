@@ -1,0 +1,73 @@
+name: 🐛 Bug Report
+description: 报告一个 bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Bug 描述
+        请描述这个 bug 的具体表现。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 详细描述
+      placeholder: 请详细描述你遇到的 bug，包括复现步骤、预期行为和实际行为。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      placeholder: 你期望的正常行为是什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      placeholder: 实际发生了什么？
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 环境信息
+      placeholder: Python版本、操作系统、其他相关环境信息
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      placeholder: 请粘贴相关的错误日志
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单
+      options:
+        - label: 我已经搜索过相关问题，确认没有重复的 bug
+          required: true
+        - label: 我提供了完整的复现步骤
+          required: true
+        - label: 我使用的是最新版本
+          required: true

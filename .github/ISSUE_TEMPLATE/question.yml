@@ -1,0 +1,30 @@
+name: ❓ Question
+description: 提问
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 问题
+      placeholder: 请描述你的问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 上下文
+      placeholder: 你在什么场景下遇到这个问题？
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单
+      options:
+        - label: 我已经搜索过文档和 Issues
+          required: true
+        - label: 这是一个明确的问题
+          required: true

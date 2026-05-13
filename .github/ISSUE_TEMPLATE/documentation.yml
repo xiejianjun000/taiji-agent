@@ -1,0 +1,38 @@
+name: 📖 Documentation
+description: 改进或修复文档
+title: "[Docs] "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 文档问题描述
+      placeholder: 请描述需要改进的文档内容和具体问题。
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: 文档位置
+      placeholder: 文档的文件路径或URL
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: 修改建议
+      placeholder: 你建议如何修改？
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 检查清单
+      options:
+        - label: 我已经确认这不是重复的文档问题
+          required: true
+        - label: 我会愿意帮助修改文档
+          required: false
