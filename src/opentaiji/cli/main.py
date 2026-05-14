@@ -3,6 +3,7 @@ OpenTaiji CLI - 命令行界面
 """
 
 import asyncio
+from typing import Optional
 import os
 import sys
 from pathlib import Path
@@ -72,7 +73,7 @@ def cli():
 @click.option("--soul", "-s", default="default", help="Soul to use")
 @click.option("--no-wfgy", is_flag=True, help="Disable WFGY")
 @click.option("--stream/--no-stream", default=True, help="Stream response")
-def run(task: str | None, provider: str, model: str, api_key: str | None, soul: str, no_wfgy: bool, stream: bool):
+def run(task: Optional[str], provider: str, model: str, api_key: Optional[str], soul: str, no_wfgy: bool, stream: bool):
     """运行 Agent"""
     if not task:
         console.print("[yellow]请提供任务描述[/yellow]")

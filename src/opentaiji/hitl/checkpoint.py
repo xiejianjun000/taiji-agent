@@ -10,9 +10,11 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class Checkpoint:
     state: dict[str, Any]
     created_at: datetime
     status: CheckpointStatus = CheckpointStatus.ACTIVE
-    parent_checkpoint_id: str | None = None
+    parent_checkpoint_id: Optional[str] = None
     metadata: dict[str, Any] = field(default_factory=dict)
     version: int = 1
 
@@ -67,7 +69,7 @@ class Checkpoint:
 class CheckpointManager:
     def __init__(
         self,
-        storage_path: str | None = None,
+        storage_path: Optional[str] = None,
         auto_save: bool = True,
         max_checkpoints: int = 100,
     ):
@@ -84,8 +86,8 @@ class CheckpointManager:
         workflow_id: str,
         step_name: str,
         state: dict[str, Any],
-        metadata: dict[str, Any] | None = None,
-        parent_checkpoint_id: str | None = None,
+        metadata: Optional[dict[str, Any]] = None,
+        parent_checkpoint_id: Optional[str] = None,
     ) -> Checkpoint:
         checkpoint = Checkpoint(
             checkpoint_id=str(uuid.uuid4()),
@@ -138,10 +140,10 @@ class CheckpointManager:
         logger.info(f"Checkpoint completed: {checkpoint_id}")
         return checkpoint
 
-    def get(self, checkpoint_id: str) -> Checkpoint | None:
+    def get(self, checkpoint_id: str) -> Optional[Checkpoint]:
         return self._checkpoints.get(checkpoint_id)
 
-    def get_latest(self, workflow_id: str) -> Checkpoint | None:
+    def get_latest(self, workflow_id: str) -> Optional[Checkpoint]:
         if workflow_id not in self._workflow_checkpoints:
             return None
         checkpoint_ids = self._workflow_checkpoints[workflow_id]

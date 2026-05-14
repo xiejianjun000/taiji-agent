@@ -9,7 +9,7 @@ import os
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -30,8 +30,8 @@ class Tool:
 
     name: str
     description: str
-    func: Any | None = None
-    parameters: dict | None = None
+    func: Optional[Any] = None
+    parameters: Optional[dict] = None
 
 
 @dataclass
@@ -41,7 +41,7 @@ class ToolResult:
     success: bool
     output: str = ""
     content: str = ""
-    error: str | None = None
+    error: Optional[str] = None
 
 
 class ToolRegistry:
@@ -314,7 +314,7 @@ class ToolRegistry:
         """获取所有工具的模式"""
         return [schema.model_dump() for schema in self._schemas.values()]
 
-    def get_schema(self, name: str) -> ToolSchema | None:
+    def get_schema(self, name: str) -> Optional[ToolSchema]:
         """获取指定工具的模式"""
         return self._schemas.get(name)
 

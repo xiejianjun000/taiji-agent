@@ -3,6 +3,7 @@ Kimi Provider - 月之暗面
 """
 
 import os
+from typing import Optional
 from collections.abc import AsyncGenerator
 
 from opentaiji.providers.base import LLMProvider, LLMResponse
@@ -13,7 +14,7 @@ class KimiProvider(LLMProvider):
 
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         model: str = "moonshot-v1-8k",
         base_url: str = "https://api.moonshot.cn/v1",
         **kwargs,
@@ -38,7 +39,7 @@ class KimiProvider(LLMProvider):
     async def chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
+        tools: Optional[list[dict]] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         stream: bool = False,
@@ -84,7 +85,7 @@ class KimiProvider(LLMProvider):
     async def stream_chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
+        tools: Optional[list[dict]] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         **kwargs,

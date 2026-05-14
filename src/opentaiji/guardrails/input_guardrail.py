@@ -3,6 +3,7 @@ Input Guardrails - 输入安全验证
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import re
 
@@ -21,8 +22,8 @@ class ContentFilter(Guardrail):
 
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
-        custom_patterns: list[str] | None = None,
+        config: Optional[GuardrailConfig] = None,
+        custom_patterns: Optional[list[str]] = None,
     ):
         super().__init__(config)
         self.patterns = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in self.BLOCKED_PATTERNS]
@@ -46,8 +47,8 @@ class ContentFilter(Guardrail):
 class ProfanityFilter(Guardrail):
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
-        custom_words: list[str] | None = None,
+        config: Optional[GuardrailConfig] = None,
+        custom_words: Optional[list[str]] = None,
     ):
         super().__init__(config)
         self.blocked_words = set(custom_words or [])
@@ -66,7 +67,7 @@ class ProfanityFilter(Guardrail):
 class RateLimitGuardrail(Guardrail):
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         max_requests_per_minute: int = 60,
         max_tokens_per_minute: int = 100000,
     ):
@@ -101,7 +102,7 @@ class RateLimitGuardrail(Guardrail):
 class LengthGuardrail(Guardrail):
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         min_length: int = 0,
         max_length: int = 100000,
     ):
@@ -126,7 +127,7 @@ class LengthGuardrail(Guardrail):
 
 class InputGuardrail:
     @staticmethod
-    def default(config: GuardrailConfig | None = None) -> list[Guardrail]:
+    def default(config: Optional[GuardrailConfig] = None) -> list[Guardrail]:
         return [
             ContentFilter(config),
             LengthGuardrail(config, max_length=50000),
@@ -134,7 +135,7 @@ class InputGuardrail:
         ]
 
     @staticmethod
-    def strict(config: GuardrailConfig | None = None) -> list[Guardrail]:
+    def strict(config: Optional[GuardrailConfig] = None) -> list[Guardrail]:
         return [
             ContentFilter(config, custom_patterns=[r"\b(SQL|RCE|Injection)\b"]),
             LengthGuardrail(config, max_length=10000),

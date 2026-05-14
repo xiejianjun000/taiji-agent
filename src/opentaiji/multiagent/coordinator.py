@@ -52,7 +52,7 @@ class AgentMessage:
     message_type: str = "info"  # info, request, response, vote
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
-    reply_to: str | None = None  # 关联的消息ID
+    reply_to: Optional[str] = None  # 关联的消息ID
 
 
 @dataclass
@@ -61,10 +61,10 @@ class AgentTask:
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     description: str = ""
-    assigned_agent: str | None = None
+    assigned_agent: Optional[str] = None
     status: str = "pending"  # pending, running, completed, failed
     result: Any = None
-    error: str | None = None
+    error: Optional[str] = None
     dependencies: list[str] = field(default_factory=list)  # 依赖的任务ID
     priority: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -87,8 +87,8 @@ class BaseAgent(ABC):
         self,
         agent_id: str,
         role: AgentRole,
-        name: str | None = None,
-        capabilities: list[AgentCapability] | None = None,
+        name: Optional[str] = None,
+        capabilities: Optional[list[AgentCapability]] = None,
     ):
         self.agent_id = agent_id
         self.role = role
@@ -96,7 +96,7 @@ class BaseAgent(ABC):
         self.capabilities = capabilities or []
         self._message_queue: asyncio.Queue = asyncio.Queue()
         self._running = False
-        self._parent: MultiAgentCoordinator | None = None
+        self._parent: Optional[MultiAgentCoordinator] = None
 
     @abstractmethod
     async def process(self, task: AgentTask) -> Any:
@@ -108,7 +108,7 @@ class BaseAgent(ABC):
         if self._parent:
             await self._parent.route_message(message)
 
-    async def receive_message(self) -> AgentMessage | None:
+    async def receive_message(self) -> Optional[AgentMessage]:
         """接收消息"""
         try:
             return await asyncio.wait_for(self._message_queue.get(), timeout=1.0)
@@ -152,8 +152,8 @@ class TaijiAgent(BaseAgent):
         agent_id: str,
         role: AgentRole,
         config: Optional["AgentConfig"] = None,
-        allowed_tools: list[str] | None = None,
-        blocked_tools: list[str] | None = None,
+        allowed_tools: Optional[list[str]] = None,
+        blocked_tools: Optional[list[str]] = None,
         max_iterations: int = 25,
     ):
         super().__init__(agent_id, role)
@@ -267,8 +267,8 @@ class MultiAgentCoordinator:
     async def create_task(
         self,
         description: str,
-        assigned_agent: str | None = None,
-        dependencies: list[str] | None = None,
+        assigned_agent: Optional[str] = None,
+        dependencies: Optional[list[str]] = None,
         priority: int = 0,
     ) -> AgentTask:
         """创建任务"""
@@ -284,7 +284,7 @@ class MultiAgentCoordinator:
     async def execute_parallel(
         self,
         tasks: list[AgentTask],
-        agent_factory: Callable | None = None,
+        agent_factory: Optional[Callable] = None,
     ) -> list[AgentTask]:
         """并行执行"""
         logger.info(f"[Coordinator] Executing {len(tasks)} tasks in parallel")
@@ -322,7 +322,7 @@ class MultiAgentCoordinator:
     async def execute_sequential(
         self,
         tasks: list[AgentTask],
-        agent_factory: Callable | None = None,
+        agent_factory: Optional[Callable] = None,
     ) -> list[AgentTask]:
         """串行执行"""
         logger.info(f"[Coordinator] Executing {len(tasks)} tasks sequentially")
@@ -355,8 +355,8 @@ class MultiAgentCoordinator:
     async def execute_hierarchical(
         self,
         root_task: AgentTask,
-        agent_factory: Callable | None = None,
-        decomposer: Callable | None = None,
+        agent_factory: Optional[Callable] = None,
+        decomposer: Optional[Callable] = None,
     ) -> AgentTask:
         """
         层级执行
@@ -496,7 +496,7 @@ class MultiAgentCoordinator:
     async def broadcast(
         self,
         message: AgentMessage,
-        agents: list[str] | None = None,
+        agents: Optional[list[str]] = None,
     ) -> list[AgentMessage]:
         """广播消息"""
         if agents:
@@ -530,7 +530,7 @@ class MultiAgentCoordinator:
     async def _execute_subtask(
         self,
         task: AgentTask,
-        factory: Callable | None,
+        factory: Optional[Callable],
     ) -> Any:
         """执行单个子任务"""
         agent = self._get_or_create_agent(task, factory)
@@ -553,7 +553,7 @@ class MultiAgentCoordinator:
     def _get_or_create_agent(
         self,
         task: AgentTask,
-        factory: Callable[..., BaseAgent] | None,
+        factory: Optional[Callable[..., BaseAgent]],
     ) -> BaseAgent:
         """获取或创建Agent"""
         if task.assigned_agent and task.assigned_agent in self.agents:
@@ -667,7 +667,7 @@ class AgentSwarm:
     async def spawn(
         self,
         template_id: str,
-        agent_id: str | None = None,
+        agent_id: Optional[str] = None,
     ) -> BaseAgent:
         """生成Agent"""
         if template_id not in self._agent_templates:
@@ -726,7 +726,7 @@ class MessageBus:
         if topic in self._subscribers:
             self._subscribers[topic] = [h for h in self._subscribers[topic] if h != handler]
 
-    async def publish(self, message: AgentMessage, topic: str | None = None):
+    async def publish(self, message: AgentMessage, topic: Optional[str] = None):
         """发布消息"""
         self._history.append(message)
         if len(self._history) > self._max_history:

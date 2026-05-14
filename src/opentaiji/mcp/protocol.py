@@ -6,8 +6,10 @@ MCP Protocol Core - 协议核心定义
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, Optional
 
 
 class MCPProtocolVersion(StrEnum):
@@ -20,7 +22,7 @@ class MCPTool:
     name: str
     description: str
     input_schema: dict[str, Any]
-    handler: Callable | None = None
+    handler: Optional[Callable] = None
 
     def to_mcp_dict(self) -> dict[str, Any]:
         return {
@@ -64,10 +66,10 @@ class MCPPrompt:
 class MCPMessage:
     jsonrpc: str = "2.0"
     method: str = ""
-    params: dict[str, Any] | None = None
-    id: Any | None = None
-    result: Any | None = None
-    error: dict[str, Any] | None = None
+    params: Optional[dict[str, Any]] = None
+    id: Optional[Any] = None
+    result: Optional[Any] = None
+    error: Optional[dict[str, Any]] = None
 
     def to_json(self) -> str:
         data: dict[str, Any] = {"jsonrpc": self.jsonrpc}

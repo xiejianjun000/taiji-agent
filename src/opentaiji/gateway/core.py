@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +34,8 @@ class Message:
     chat_id: str
     user_id: str
     content: str
-    message_id: str | None = None
-    metadata: dict[str, Any] | None = None
+    message_id: Optional[str] = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 @dataclass
@@ -44,7 +44,7 @@ class OutgoingMessage:
 
     content: str
     chat_id: str
-    metadata: dict[str, Any] | None = None
+    metadata: Optional[dict[str, Any]] = None
 
 
 class PlatformAdapter(ABC):
@@ -451,7 +451,7 @@ class MessageGateway:
         platform: str,
         chat_id: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> bool:
         """发送消息"""
         if platform not in self._adapters:

@@ -11,15 +11,17 @@ import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from .exporter import TraceExporter
 
 logger = logging.getLogger(__name__)
 
-trace_context: ContextVar[str | None] = ContextVar("trace_context", default=None)
+trace_context: ContextVar[Optional[str]] = ContextVar("trace_context", default=None)
 
 
 class SpanKind(StrEnum):
@@ -46,14 +48,14 @@ class TraceSpan:
     name: str
     kind: SpanKind
     start_time: float
-    end_time: float | None = None
+    end_time: Optional[float] = None
     status: SpanStatus = SpanStatus.OK
-    error_message: str | None = None
+    error_message: Optional[str] = None
     attributes: dict[str, Any] = field(default_factory=dict)
     events: list[TraceEvent] = field(default_factory=list)
-    parent_span_id: str | None = None
-    inputs: dict[str, Any] | None = None
-    outputs: dict[str, Any] | None = None
+    parent_span_id: Optional[str] = None
+    inputs: Optional[dict[str, Any]] = None
+    outputs: Optional[dict[str, Any]] = None
 
     def duration_ms(self) -> float:
         if self.end_time:
@@ -95,27 +97,27 @@ class TraceEvent:
 
 class TraceSpanContext:
     def __init__(self):
-        self._current_span: TraceSpan | None = None
+        self._current_span: Optional[TraceSpan] = None
         self._span_stack: list[TraceSpan] = []
 
     def set_current_span(self, span: TraceSpan) -> None:
         self._current_span = span
 
-    def get_current_span(self) -> TraceSpan | None:
+    def get_current_span(self) -> Optional[TraceSpan]:
         return self._current_span
 
     def push_span(self, span: TraceSpan) -> None:
         self._span_stack.append(span)
         self._current_span = span
 
-    def pop_span(self) -> TraceSpan | None:
+    def pop_span(self) -> Optional[TraceSpan]:
         if self._span_stack:
             popped = self._span_stack.pop()
             self._current_span = self._span_stack[-1] if self._span_stack else None
             return popped
         return None
 
-    def get_trace_id(self) -> str | None:
+    def get_trace_id(self) -> Optional[str]:
         if self._span_stack:
             return self._span_stack[0].trace_id
         return None
@@ -129,7 +131,7 @@ class TracingManager:
         self._spans: dict[str, TraceSpan] = {}
         self._exporters: list[TraceExporter] = []
         self._enabled = True
-        self._project_name: str | None = None
+        self._project_name: Optional[str] = None
         self._metadata: dict[str, Any] = {}
 
     def add_exporter(self, exporter: TraceExporter) -> None:
@@ -151,9 +153,9 @@ class TracingManager:
         self,
         name: str,
         kind: SpanKind = SpanKind.AGENT,
-        attributes: dict[str, Any] | None = None,
-        parent_span_id: str | None = None,
-        inputs: dict[str, Any] | None = None,
+        attributes: Optional[dict[str, Any]] = None,
+        parent_span_id: Optional[str] = None,
+        inputs: Optional[dict[str, Any]] = None,
     ) -> TraceSpan:
         trace_id = _span_context.get_trace_id() or str(uuid.uuid4())
         span_id = str(uuid.uuid4())[:16]
@@ -176,8 +178,8 @@ class TracingManager:
         self,
         span: TraceSpan,
         status: SpanStatus = SpanStatus.OK,
-        outputs: dict[str, Any] | None = None,
-        error: str | None = None,
+        outputs: Optional[dict[str, Any]] = None,
+        error: Optional[str] = None,
     ) -> None:
         span.end_time = time.time()
         span.status = status
@@ -191,7 +193,7 @@ class TracingManager:
     def add_event(
         self,
         name: str,
-        attributes: dict[str, Any] | None = None,
+        attributes: Optional[dict[str, Any]] = None,
     ) -> None:
         span = _span_context.get_current_span()
         if span:
@@ -248,8 +250,8 @@ class TracingManager:
         self,
         name: str,
         kind: SpanKind = SpanKind.AGENT,
-        attributes: dict[str, Any] | None = None,
-        inputs: dict[str, Any] | None = None,
+        attributes: Optional[dict[str, Any]] = None,
+        inputs: Optional[dict[str, Any]] = None,
     ):
         span = self.start_span(name, kind, attributes, inputs=inputs)
         try:

@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,18 +26,18 @@ class ValidationResult:
     level: ValidationLevel
     message: str
     details: dict[str, Any] = field(default_factory=dict)
-    flagged_content: list[str] | None = None
+    flagged_content: Optional[list[str]] = None
 
     @classmethod
-    def pass_result(cls, message: str = "Validation passed", details: dict | None = None) -> ValidationResult:
+    def pass_result(cls, message: str = "Validation passed", details: Optional[dict] = None) -> ValidationResult:
         return cls(is_valid=True, level=ValidationLevel.PASS, message=message, details=details or {})
 
     @classmethod
-    def fail_result(cls, message: str, details: dict | None = None) -> ValidationResult:
+    def fail_result(cls, message: str, details: Optional[dict] = None) -> ValidationResult:
         return cls(is_valid=False, level=ValidationLevel.FAIL, message=message, details=details or {})
 
     @classmethod
-    def warn_result(cls, message: str, details: dict | None = None) -> ValidationResult:
+    def warn_result(cls, message: str, details: Optional[dict] = None) -> ValidationResult:
         return cls(is_valid=True, level=ValidationLevel.WARN, message=message, details=details or {})
 
 
@@ -50,7 +50,7 @@ class GuardrailConfig:
 
 
 class Guardrail(ABC):
-    def __init__(self, config: GuardrailConfig | None = None):
+    def __init__(self, config: Optional[GuardrailConfig] = None):
         self.config = config or GuardrailConfig()
         self.name = self.__class__.__name__
 
@@ -68,7 +68,7 @@ class CompositeGuardrail(Guardrail):
     def __init__(
         self,
         guardrails: list[Guardrail],
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         mode: str = "all",
     ):
         super().__init__(config)

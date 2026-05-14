@@ -7,7 +7,7 @@ import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -32,8 +32,8 @@ class TaskStatus(Enum):
 class Message(BaseModel):
     role: str
     content: str
-    tool_calls: list[dict] | None = None
-    tool_call_id: str | None = None
+    tool_calls: Optional[list[dict]] = None
+    tool_call_id: Optional[str] = None
 
 
 class ToolCall(BaseModel):
@@ -52,8 +52,8 @@ class ToolResult(BaseModel):
 class AgentConfig:
     provider: str = "anthropic"
     model: str = "claude-sonnet-4-20250514"
-    api_key: str | None = None
-    base_url: str | None = None
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
     soul: str = "default"
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -69,8 +69,8 @@ class AgentConfig:
 @dataclass
 class TaskResult:
     status: TaskStatus
-    content: str | None = None
-    error: str | None = None
+    content: Optional[str] = None
+    error: Optional[str] = None
     iterations: int = 0
     tools_used: list[str] = field(default_factory=list)
     wfgy_blocked: int = 0
@@ -91,8 +91,8 @@ class TaijiAgent:
 
     def __init__(
         self,
-        config: AgentConfig | None = None,
-        provider: LLMProvider | None = None,
+        config: Optional[AgentConfig] = None,
+        provider: Optional[LLMProvider] = None,
     ):
         self.config = config or AgentConfig()
         self.provider = provider
@@ -155,7 +155,7 @@ class TaijiAgent:
         else:
             raise ValueError(f"Unsupported provider: {self.config.provider}")
 
-    async def run(self, task: str, system_message: str | None = None) -> TaskResult:
+    async def run(self, task: str, system_message: Optional[str] = None) -> TaskResult:
         """
         执行任务 - 太极 Agent Loop
 
@@ -317,7 +317,7 @@ class TaijiAgent:
             iterations=self.iteration_count,
         )
 
-    async def stream_run(self, task: str, system_message: str | None = None) -> AsyncGenerator[str, None]:
+    async def stream_run(self, task: str, system_message: Optional[str] = None) -> AsyncGenerator[str, None]:
         """
         流式执行任务
         """
@@ -426,7 +426,7 @@ class TaijiAgent:
 async def create_agent(
     provider: str = "anthropic",
     model: str = "claude-sonnet-4-20250514",
-    api_key: str | None = None,
+    api_key: Optional[str] = None,
     **kwargs,
 ) -> TaijiAgent:
     """创建 Agent 的便捷函数"""

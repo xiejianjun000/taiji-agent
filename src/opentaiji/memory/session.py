@@ -5,7 +5,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 
 class SessionMemory:
@@ -16,7 +16,7 @@ class SessionMemory:
     支持用户画像、语义搜索、上下文存储
     """
 
-    def __init__(self, memory_dir: Path | None = None):
+    def __init__(self, memory_dir: Optional[Path] = None):
         if memory_dir is None:
             self.memory_dir = Path.home() / ".opentaiji" / "memory"
         else:
@@ -86,7 +86,7 @@ class SessionMemory:
         }
         self._save_memory()
 
-    def get(self, key: str) -> str | None:
+    def get(self, key: str) -> Optional[str]:
         """获取记忆"""
         entry = self._memory.get(key)
         return entry["value"] if entry else None

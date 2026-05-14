@@ -11,8 +11,10 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class ApprovalDecision(StrEnum):
 class ApprovalConfig:
     timeout_seconds: int = 3600
     auto_reject_on_timeout: bool = False
-    escalation_email: str | None = None
+    escalation_email: Optional[str] = None
     require_reason: bool = True
     allow_modification: bool = True
     max_retries: int = 3
@@ -54,13 +56,13 @@ class ApprovalRequest:
     requested_at: datetime
     timeout_at: datetime
     status: ApprovalStatus = ApprovalStatus.PENDING
-    responded_at: datetime | None = None
-    responded_by: str | None = None
-    decision: ApprovalDecision | None = None
-    decision_notes: str | None = None
-    modified_parameters: dict[str, Any] | None = None
+    responded_at: Optional[datetime] = None
+    responded_by: Optional[str] = None
+    decision: Optional[ApprovalDecision] = None
+    decision_notes: Optional[str] = None
+    modified_parameters: Optional[dict[str, Any]] = None
     retry_count: int = 0
-    agent_state: dict[str, Any] | None = None
+    agent_state: Optional[dict[str, Any]] = None
 
     @classmethod
     def create(
@@ -70,9 +72,9 @@ class ApprovalRequest:
         action_description: str,
         justification: str,
         risk_level: str = "medium",
-        parameters: dict[str, Any] | None = None,
-        config: ApprovalConfig | None = None,
-        agent_state: dict[str, Any] | None = None,
+        parameters: Optional[dict[str, Any]] = None,
+        config: Optional[ApprovalConfig] = None,
+        agent_state: Optional[dict[str, Any]] = None,
     ) -> ApprovalRequest:
         cfg = config or ApprovalConfig()
         now = datetime.now()
@@ -91,7 +93,7 @@ class ApprovalRequest:
 
 
 class ApprovalQueue:
-    def __init__(self, config: ApprovalConfig | None = None):
+    def __init__(self, config: Optional[ApprovalConfig] = None):
         self.config = config or ApprovalConfig()
         self._pending: dict[str, ApprovalRequest] = {}
         self._history: list[ApprovalRequest] = []
@@ -115,8 +117,8 @@ class ApprovalQueue:
         action_description: str,
         justification: str,
         risk_level: str = "medium",
-        parameters: dict[str, Any] | None = None,
-        agent_state: dict[str, Any] | None = None,
+        parameters: Optional[dict[str, Any]] = None,
+        agent_state: Optional[dict[str, Any]] = None,
     ) -> str:
         request = ApprovalRequest.create(
             agent_name=agent_name,
@@ -137,7 +139,7 @@ class ApprovalQueue:
     async def wait_for_decision(
         self,
         request_id: str,
-        timeout: int | None = None,
+        timeout: Optional[int] = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -163,7 +165,7 @@ class ApprovalQueue:
         self,
         request_id: str,
         user_id: str,
-        notes: str | None = None,
+        notes: Optional[str] = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -183,7 +185,7 @@ class ApprovalQueue:
         self,
         request_id: str,
         user_id: str,
-        notes: str | None = None,
+        notes: Optional[str] = None,
     ) -> ApprovalRequest:
         if request_id not in self._pending:
             raise ValueError(f"Request not found: {request_id}")
@@ -204,7 +206,7 @@ class ApprovalQueue:
         request_id: str,
         user_id: str,
         modified_parameters: dict[str, Any],
-        notes: str | None = None,
+        notes: Optional[str] = None,
     ) -> ApprovalRequest:
         if not self.config.allow_modification:
             raise ValueError("Modification not allowed")

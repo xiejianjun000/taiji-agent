@@ -9,8 +9,10 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import TYPE_CHECKING, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ class HandoffResult:
     transferred_at: datetime
     context_summary: str
     success: bool
-    error: str | None = None
+    error: Optional[str] = None
 
 
 @dataclass
@@ -61,7 +63,7 @@ class Handoff(ABC):
         name: str,
         description: str,
         agent: Any,
-        config: HandoffConfig | None = None,
+        config: Optional[HandoffConfig] = None,
     ):
         self.name = name
         self.description = description
@@ -98,11 +100,11 @@ class Handoff(ABC):
 
 
 class HandoffManager:
-    def __init__(self, config: HandoffConfig | None = None):
+    def __init__(self, config: Optional[HandoffConfig] = None):
         self.config = config or HandoffConfig()
         self._handoffs: dict[str, Handoff] = {}
         self._handoff_history: list[HandoffResult] = []
-        self._current_agent: str | None = None
+        self._current_agent: Optional[str] = None
 
     def register(self, handoff: Handoff) -> None:
         self._handoffs[handoff.name] = handoff
@@ -113,7 +115,7 @@ class HandoffManager:
             del self._handoffs[name]
             logger.info(f"Handoff unregistered: {name}")
 
-    def get(self, name: str) -> Handoff | None:
+    def get(self, name: str) -> Optional[Handoff]:
         return self._handoffs.get(name)
 
     def list_handoffs(self) -> list[Handoff]:

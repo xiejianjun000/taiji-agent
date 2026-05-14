@@ -10,7 +10,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,8 @@ class NodeResult:
         node_name: str,
         output: Any,
         success: bool = True,
-        error: str | None = None,
-        metadata: dict[str, Any] | None = None,
+        error: Optional[str] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ):
         self.node_name = node_name
         self.output = output
@@ -40,7 +40,7 @@ class WorkflowState:
     history: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
-    checkpoint_id: str | None = None
+    checkpoint_id: Optional[str] = None
 
     def add_history(self, node: str, action: str, data: Any) -> None:
         self.history.append(
@@ -68,14 +68,14 @@ class WorkflowConfig:
 
 
 class WorkflowEngine:
-    def __init__(self, config: WorkflowConfig | None = None):
+    def __init__(self, config: Optional[WorkflowConfig] = None):
         self.config = config or WorkflowConfig()
         self._nodes: dict[str, Callable[..., Any]] = {}
         self._edges: dict[str, str] = {}
         self._conditional_edges: dict[str, Callable[[WorkflowState], str]] = {}
         self._interrupt_nodes: set[str] = set()
         self._interrupted: dict[str, asyncio.Event] = {}
-        self._state: WorkflowState | None = None
+        self._state: Optional[WorkflowState] = None
 
     def add_node(
         self,
@@ -151,15 +151,15 @@ class WorkflowEngine:
             logger.error(error_msg)
             return NodeResult(node_name=node_name, output=None, success=False, error=str(e))
 
-    def _get_next_node(self, current_node: str, state: WorkflowState) -> str | None:
+    def _get_next_node(self, current_node: str, state: WorkflowState) -> Optional[str]:
         if current_node in self._conditional_edges:
             return self._conditional_edges[current_node](state)
         return self._edges.get(current_node)
 
     async def run(
         self,
-        initial_state: dict[str, Any] | None = None,
-        start_node: str | None = None,
+        initial_state: Optional[dict[str, Any]] = None,
+        start_node: Optional[str] = None,
     ) -> WorkflowState:
         state = WorkflowState(
             current_node=start_node or self._get_start_node(),
@@ -201,7 +201,7 @@ class WorkflowEngine:
                 return node
         return list(self._nodes.keys())[0]
 
-    def resume(self, state: dict[str, Any] | None = None) -> WorkflowState:
+    def resume(self, state: Optional[dict[str, Any]] = None) -> WorkflowState:
         if not self._state:
             raise ValueError("No interrupted workflow to resume")
         if state:
@@ -213,7 +213,7 @@ class WorkflowEngine:
         logger.info(f"Workflow resumed at: {current}")
         return self._state
 
-    def get_state(self) -> WorkflowState | None:
+    def get_state(self) -> Optional[WorkflowState]:
         return self._state
 
     def get_nodes(self) -> list[str]:

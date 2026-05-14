@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ class ConfidenceGate:
         action_description: str,
         risk_level: str,
         parameters: dict[str, Any],
-        context: dict[str, Any] | None = None,
+        context: Optional[dict[str, Any]] = None,
     ) -> ConfidenceResult:
         confidence = self._calculate_confidence(action_type, action_description, risk_level, parameters, context)
         level = self._get_level(confidence)
@@ -74,7 +76,7 @@ class ConfidenceGate:
         action_description: str,
         risk_level: str,
         parameters: dict[str, Any],
-        context: dict[str, Any] | None,
+        context: Optional[dict[str, Any]],
     ) -> float:
         base_confidence = 0.8
         if risk_level == "low":
@@ -133,7 +135,7 @@ class ConfidenceGate:
         action_description: str,
         risk_level: str,
         parameters: dict[str, Any],
-        context: dict[str, Any] | None = None,
+        context: Optional[dict[str, Any]] = None,
     ) -> tuple[bool, ConfidenceResult]:
         result = self.evaluate(action_type, action_description, risk_level, parameters, context)
         should_request = not result.should_auto_approve

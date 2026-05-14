@@ -12,7 +12,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class HonchoMemory:
     支持用户画像、语义记忆、偏好学习
     """
 
-    def __init__(self, memory_dir: Path | None = None):
+    def __init__(self, memory_dir: Optional[Path] = None):
         if memory_dir is None:
             self.memory_dir = Path.home() / ".opentaiji" / "memory" / "honcho"
         else:
@@ -155,10 +155,10 @@ class HonchoMemory:
     def update_peer_card(
         self,
         peer_id: str,
-        facts: list[str] | None = None,
-        preferences: dict[str, Any] | None = None,
-        sentiment: float | None = None,
-        topic: str | None = None,
+        facts: Optional[list[str]] = None,
+        preferences: Optional[dict[str, Any]] = None,
+        sentiment: Optional[float] = None,
+        topic: Optional[str] = None,
     ):
         """更新用户画像"""
         card = self.get_peer_card(peer_id)
@@ -185,7 +185,7 @@ class HonchoMemory:
         self,
         event: str,
         conclusion: str,
-        topics: list[str] | None = None,
+        topics: Optional[list[str]] = None,
         confidence: float = 0.5,
     ) -> str:
         """存储上下文"""
@@ -210,8 +210,8 @@ class HonchoMemory:
 
     def recall_contexts(
         self,
-        query: str | None = None,
-        topic: str | None = None,
+        query: Optional[str] = None,
+        topic: Optional[str] = None,
         limit: int = 10,
     ) -> list[LearnedContext]:
         """回忆相关上下文"""
@@ -368,7 +368,7 @@ class SelfImprovingLoop:
 
         return topics
 
-    def _analyze_sentiment(self, text: str) -> float | None:
+    def _analyze_sentiment(self, text: str) -> Optional[float]:
         """分析情感"""
         positive_words = ["好", "不错", "谢谢", "棒", "perfect", "great", "thanks", "good"]
         negative_words = ["不好", "错误", "失败", "bad", "wrong", "error", "fail"]
@@ -391,7 +391,7 @@ class SelfImprovingLoop:
         task: str,
         result: str,
         tools_used: list[str],
-    ) -> Any | None:
+    ) -> Optional[Any]:
         """可能创建技能"""
         complexity_score = self._estimate_complexity(task, tools_used)
 

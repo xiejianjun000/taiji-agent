@@ -8,8 +8,10 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Any, TypeVar
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, TypeVar, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class NodeType(StrEnum):
 class Node:
     name: str
     node_type: NodeType
-    handler: Callable | None = None
+    handler: Optional[Callable] = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -69,14 +71,14 @@ class WorkflowGraph:
         self._edges: list[Edge] = []
         self._conditional_edges: dict[str, ConditionalEdge] = {}
         self._reducers: dict[str, StateReducer] = {}
-        self._entry_point: str | None = None
+        self._entry_point: Optional[str] = None
         self._end_nodes: list[str] = []
 
     def add_node(
         self,
         name: str,
         node_type: NodeType = NodeType.AGENT,
-        handler: Callable | None = None,
+        handler: Optional[Callable] = None,
         **metadata,
     ) -> WorkflowGraph:
         node = Node(
@@ -106,7 +108,7 @@ class WorkflowGraph:
         self,
         source: str,
         routes: dict[str, str],
-        default: str | None = None,
+        default: Optional[str] = None,
     ) -> WorkflowGraph:
         if source not in self._nodes:
             raise ValueError(f"Node not found: {source}")

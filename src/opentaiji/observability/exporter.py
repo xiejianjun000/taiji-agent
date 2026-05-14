@@ -11,7 +11,7 @@ import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from .tracing import TraceSpan
 
@@ -65,7 +65,7 @@ class FileExporter(TraceExporter):
         self.format = format
         self.max_file_size = max_file_size_mb * 1024 * 1024
         self.directory.mkdir(parents=True, exist_ok=True)
-        self._current_file: Path | None = None
+        self._current_file: Optional[Path] = None
         self._file_size = 0
 
     def _get_current_file(self) -> Path:
@@ -100,14 +100,14 @@ class FileExporter(TraceExporter):
 class LangSmithExporter(TraceExporter):
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         project_name: str = "opentaiji",
         endpoint: str = "https://api.smith.langchain.com",
     ):
         self.api_key = api_key or os.getenv("LANGSMITH_API_KEY")
         self.project_name = project_name
         self.endpoint = endpoint
-        self._client: Any | None = None
+        self._client: Optional[Any] = None
         if self.api_key:
             self._init_client()
 

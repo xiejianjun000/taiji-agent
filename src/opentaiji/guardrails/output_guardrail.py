@@ -3,6 +3,7 @@ Output Guardrails - 输出质量与安全验证
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import re
 
@@ -20,7 +21,7 @@ class SensitiveDataFilter(Guardrail):
 
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         filter_emails: bool = True,
         filter_phones: bool = True,
         filter_ssn: bool = True,
@@ -76,7 +77,7 @@ class SensitiveDataFilter(Guardrail):
 class QualityGate(Guardrail):
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         min_length: int = 10,
         max_repeated_chars: int = 5,
         require_capitalized: bool = False,
@@ -114,7 +115,7 @@ class QualityGate(Guardrail):
 class HallucinationGate(Guardrail):
     def __init__(
         self,
-        config: GuardrailConfig | None = None,
+        config: Optional[GuardrailConfig] = None,
         confidence_threshold: float = 0.7,
     ):
         super().__init__(config)
@@ -145,7 +146,7 @@ class HallucinationGate(Guardrail):
 
 class OutputGuardrail:
     @staticmethod
-    def default(config: GuardrailConfig | None = None) -> list[Guardrail]:
+    def default(config: Optional[GuardrailConfig] = None) -> list[Guardrail]:
         return [
             SensitiveDataFilter(config),
             QualityGate(config),
@@ -153,7 +154,7 @@ class OutputGuardrail:
         ]
 
     @staticmethod
-    def strict(config: GuardrailConfig | None = None) -> list[Guardrail]:
+    def strict(config: Optional[GuardrailConfig] = None) -> list[Guardrail]:
         return [
             SensitiveDataFilter(config),
             QualityGate(config, require_capitalized=True),

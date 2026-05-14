@@ -10,7 +10,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from aiohttp import web
 
@@ -33,21 +33,21 @@ class MCPServerConfig:
     server_version: str = "2.0.0"
     protocol_version: str = MCPProtocolVersion.LATEST.value
     enable_cors: bool = True
-    auth_token: str | None = None
+    auth_token: Optional[str] = None
 
 
 class MCPServerAdapter:
     def __init__(
         self,
         agent: Any,
-        config: MCPServerConfig | None = None,
+        config: Optional[MCPServerConfig] = None,
     ):
         self.agent = agent
         self.config = config or MCPServerConfig()
         self._tools: dict[str, MCPTool] = {}
         self._resources: dict[str, MCPResource] = {}
-        self._app: web.Application | None = None
-        self._runner: web.AppRunner | None = None
+        self._app: web.Optional[Application] = None
+        self._runner: web.Optional[AppRunner] = None
         self._initialized = False
 
     def register_tool(self, tool: MCPTool) -> None:
@@ -59,7 +59,7 @@ class MCPServerAdapter:
         name: str,
         description: str,
         func: Callable,
-        input_schema: dict[str, Any] | None = None,
+        input_schema: Optional[dict[str, Any]] = None,
     ) -> None:
         if input_schema is None:
             input_schema = self._generate_schema_from_function(func)

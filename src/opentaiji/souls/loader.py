@@ -4,7 +4,7 @@ Soul 人格系统 - 基于 cgast/harness
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import yaml
 from pydantic import BaseModel
@@ -46,7 +46,7 @@ class SoulLoader:
     从 YAML 文件加载人格定义
     """
 
-    def __init__(self, souls_dir: Path | None = None):
+    def __init__(self, souls_dir: Optional[Path] = None):
         if souls_dir is None:
             self.souls_dir = Path.home() / ".opentaiji" / "souls"
         else:

@@ -12,8 +12,10 @@ import sys
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ class ExecutionResult:
     execution_id: str
     status: ExecutionStatus
     output: str
-    error: str | None = None
+    error: Optional[str] = None
     execution_time_ms: float = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -61,7 +63,7 @@ class SandboxConfig:
 
 
 class CodeExecutor:
-    def __init__(self, config: SandboxConfig | None = None):
+    def __init__(self, config: Optional[SandboxConfig] = None):
         self.config = config or SandboxConfig()
         self._execution_count = 0
         self._history: list[ExecutionResult] = []
@@ -70,7 +72,7 @@ class CodeExecutor:
         self,
         code: str,
         language: str = "python",
-        context: dict[str, Any] | None = None,
+        context: Optional[dict[str, Any]] = None,
     ) -> ExecutionResult:
         execution_id = str(uuid.uuid4())[:12]
         self._execution_count += 1
@@ -230,14 +232,14 @@ class SandboxManager:
     def create_sandbox(
         self,
         name: str,
-        config: SandboxConfig | None = None,
+        config: Optional[SandboxConfig] = None,
     ) -> str:
         sandbox_id = str(uuid.uuid4())[:8]
         self._sandboxes[sandbox_id] = config or SandboxConfig()
         logger.info(f"Sandbox created: {sandbox_id} ({name})")
         return sandbox_id
 
-    def get_sandbox(self, sandbox_id: str) -> SandboxConfig | None:
+    def get_sandbox(self, sandbox_id: str) -> Optional[SandboxConfig]:
         return self._sandboxes.get(sandbox_id)
 
     def destroy_sandbox(self, sandbox_id: str) -> bool:
@@ -248,6 +250,6 @@ class SandboxManager:
             return True
         return False
 
-    def create_executor(self, sandbox_id: str | None = None) -> CodeExecutor:
+    def create_executor(self, sandbox_id: Optional[str] = None) -> CodeExecutor:
         config = self._sandboxes.get(sandbox_id) if sandbox_id else None
         return CodeExecutor(config)

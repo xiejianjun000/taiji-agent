@@ -6,7 +6,7 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -49,7 +49,7 @@ class EventBus:
         """取消订阅"""
         self._hooks[event_name] = [h for h in self._hooks[event_name] if h.handler != handler]
 
-    async def emit(self, event_name: str, data: dict[str, Any] | None = None) -> Any:
+    async def emit(self, event_name: str, data: Optional[dict[str, Any]] = None) -> Any:
         """发出事件"""
         event = Event(name=event_name, data=data or {})
 
@@ -77,7 +77,7 @@ class EventBus:
 
         return {"results": results}
 
-    def emit_sync(self, event_name: str, data: dict[str, Any] | None = None) -> Any:
+    def emit_sync(self, event_name: str, data: Optional[dict[str, Any]] = None) -> Any:
         """同步发出事件"""
         event = Event(name=event_name, data=data or {})
 
@@ -98,7 +98,7 @@ class EventBus:
 
         return {"results": results}
 
-    def get_history(self, event_name: str | None = None, limit: int = 100) -> list[Event]:
+    def get_history(self, event_name: Optional[str] = None, limit: int = 100) -> list[Event]:
         """获取事件历史"""
         if event_name:
             return [e for e in self._event_history[-limit:] if e.name == event_name]

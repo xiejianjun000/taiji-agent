@@ -4,7 +4,7 @@ Anthropic Provider
 
 import os
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, Optional
 
 from opentaiji.providers.base import LLMProvider, LLMResponse
 
@@ -12,7 +12,7 @@ from opentaiji.providers.base import LLMProvider, LLMResponse
 class AnthropicProvider(LLMProvider):
     """Anthropic Claude Provider"""
 
-    def __init__(self, api_key: str | None = None, model: str = "claude-sonnet-4-20250514", **kwargs):
+    def __init__(self, api_key: Optional[str] = None, model: str = "claude-sonnet-4-20250514", **kwargs):
         super().__init__(api_key=api_key, model=model, **kwargs)
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.client = None
@@ -31,7 +31,7 @@ class AnthropicProvider(LLMProvider):
     async def chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
+        tools: Optional[list[dict]] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         stream: bool = False,
@@ -101,7 +101,7 @@ class AnthropicProvider(LLMProvider):
     async def stream_chat(
         self,
         messages: list[dict],
-        tools: list[dict] | None = None,
+        tools: Optional[list[dict]] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         **kwargs,

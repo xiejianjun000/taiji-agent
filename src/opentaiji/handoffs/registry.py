@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class AgentMetadata:
 
 
 class AgentRegistry:
-    _instance: AgentRegistry | None = None
+    _instance: Optional[AgentRegistry] = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -49,9 +49,9 @@ class AgentRegistry:
         name: str,
         role: str,
         description: str = "",
-        capabilities: list[str] | None = None,
-        languages: list[str] | None = None,
-        tags: list[str] | None = None,
+        capabilities: Optional[list[str]] = None,
+        languages: Optional[list[str]] = None,
+        tags: Optional[list[str]] = None,
         **custom_data,
     ) -> str:
         agent_id = str(uuid.uuid4())[:8]
@@ -91,10 +91,10 @@ class AgentRegistry:
         logger.info(f"Agent unregistered: {agent_id}")
         return True
 
-    def get(self, agent_id: str) -> Any | None:
+    def get(self, agent_id: str) -> Optional[Any]:
         return self._agents.get(agent_id)
 
-    def get_by_name(self, name: str) -> Any | None:
+    def get_by_name(self, name: str) -> Optional[Any]:
         for agent_id, metadata in self._metadata.items():
             if metadata.name == name:
                 return self._agents.get(agent_id)

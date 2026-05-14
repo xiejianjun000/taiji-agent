@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import yaml
 
@@ -264,7 +264,7 @@ class SkillMarket:
         },
     }
 
-    def browse(self, category: str | None = None) -> list[dict]:
+    def browse(self, category: Optional[str] = None) -> list[dict]:
         """浏览技能"""
         skills = []
         for skill_id, data in self.BUNDLED_SKILLS.items():
@@ -277,7 +277,7 @@ class SkillMarket:
                 )
         return skills
 
-    def get(self, skill_id: str) -> dict | None:
+    def get(self, skill_id: str) -> Optional[dict]:
         """获取技能"""
         return self.BUNDLED_SKILLS.get(skill_id)
 
@@ -289,7 +289,7 @@ class SkillManager:
     管理技能的安装、使用、创建、自改进
     """
 
-    def __init__(self, skills_dir: Path | None = None):
+    def __init__(self, skills_dir: Optional[Path] = None):
         if skills_dir is None:
             self.skills_dir = Path.home() / ".opentaiji" / "skills"
         else:
@@ -319,14 +319,14 @@ class SkillManager:
         with open(skill_file, "w", encoding="utf-8") as f:
             yaml.dump(skill.to_dict(), f, allow_unicode=True, default_flow_style=False)
 
-    def list(self, category: str | None = None) -> list[Skill]:
+    def list(self, category: Optional[str] = None) -> list[Skill]:
         """列出技能"""
         skills = list(self._skills.values())
         if category:
             skills = [s for s in skills if s.category == category]
         return sorted(skills, key=lambda s: -s.usage_count)
 
-    def get(self, skill_id: str) -> Skill | None:
+    def get(self, skill_id: str) -> Optional[Skill]:
         """获取技能"""
         return self._skills.get(skill_id)
 
@@ -362,9 +362,9 @@ class SkillManager:
         name: str,
         description: str,
         instructions: str,
-        tools: builtins.list[str] | None = None,
+        tools: builtins.Optional[list[str]] = None,
         category: str = "custom",
-        source_task: str | None = None,
+        source_task: Optional[str] = None,
     ) -> Skill:
         """从任务创建新技能"""
         skill_id = self._generate_skill_id(name)
@@ -391,7 +391,7 @@ class SkillManager:
         logger.info(f"Created skill: {skill_id}")
         return skill
 
-    async def improve(self, skill_id: str, new_patterns: builtins.list[str]) -> Skill | None:
+    async def improve(self, skill_id: str, new_patterns: builtins.list[str]) -> Optional[Skill]:
         """改进技能"""
         skill = self._skills.get(skill_id)
         if not skill:
@@ -408,7 +408,7 @@ class SkillManager:
         logger.info(f"Improved skill: {skill_id}")
         return skill
 
-    def use(self, skill_id: str) -> str | None:
+    def use(self, skill_id: str) -> Optional[str]:
         """使用技能"""
         skill = self._skills.get(skill_id)
         if not skill:
@@ -441,7 +441,7 @@ class SkillManager:
             return f"{base_id}-{len(self._skills)}"
         return base_id
 
-    def browse_market(self, category: str | None = None) -> builtins.list[dict[str, Any]]:
+    def browse_market(self, category: Optional[str] = None) -> builtins.list[dict[str, Any]]:
         """浏览技能市场"""
         return self._market.browse(category)
 
@@ -472,7 +472,7 @@ class SkillCreator:
         task: str,
         conversation: list[dict],
         successful_result: str,
-    ) -> Skill | None:
+    ) -> Optional[Skill]:
         """从对话中提取技能"""
         complexity_score = self._estimate_complexity(task, conversation)
 

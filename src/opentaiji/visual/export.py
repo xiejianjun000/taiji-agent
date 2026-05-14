@@ -10,8 +10,10 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Any
+from enum import Enum
+class StrEnum(str, Enum):
+    pass
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,7 @@ class NodeData:
 class EdgeData:
     source: str
     target: str
-    label: str | None = None
+    label: Optional[str] = None
     edge_type: str = "default"
 
 

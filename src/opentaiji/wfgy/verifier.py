@@ -4,6 +4,7 @@ WFGY 防幻觉系统 - OpenTaiji 核心组件
 """
 
 import re
+from typing import Optional
 from dataclasses import dataclass
 
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ class WFGYRule(BaseModel):
     pattern: str
     expected: bool
     weight: float = 1.0
-    violation_message: str | None = None
+    violation_message: Optional[str] = None
 
 
 class WFGYKnowledgeEntry(BaseModel):
@@ -48,8 +49,8 @@ class WFGYVerifier:
 
     def __init__(
         self,
-        rules: list[WFGYRule] | None = None,
-        knowledge_base: list[WFGYKnowledgeEntry] | None = None,
+        rules: Optional[list[WFGYRule]] = None,
+        knowledge_base: Optional[list[WFGYKnowledgeEntry]] = None,
         minimum_score: float = 0.7,
     ):
         self.rules = rules or []
@@ -71,7 +72,7 @@ class WFGYVerifier:
         self,
         pattern: str,
         expected: bool,
-        name: str | None = None,
+        name: Optional[str] = None,
         weight: float = 1.0,
     ):
         """添加验证规则"""
@@ -297,7 +298,7 @@ class SourceTracer:
     def add_source(
         self,
         content: str,
-        source_url: str | None = None,
+        source_url: Optional[str] = None,
         source_title: str = "",
         source_type: str = "unknown",
     ):

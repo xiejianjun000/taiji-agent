@@ -8,7 +8,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class MCPConnectionConfig:
     url: str
     name: str = "mcp_server"
-    auth_token: str | None = None
+    auth_token: Optional[str] = None
     timeout: int = 30
     retry_count: int = 3
 
@@ -30,11 +30,11 @@ class MCPConnectionConfig:
 class MCPClientAdapter:
     def __init__(
         self,
-        config: MCPConnectionConfig | None = None,
+        config: Optional[MCPConnectionConfig] = None,
     ):
         self.config = config
         self._tools: dict[str, MCPTool] = {}
-        self._session: aiohttp.ClientSession | None = None
+        self._session: aiohttp.Optional[ClientSession] = None
         self._request_id = 0
         self._initialized = False
 
