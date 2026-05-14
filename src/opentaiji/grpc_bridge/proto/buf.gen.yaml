@@ -1,0 +1,32 @@
+# Buf 代码生成配置
+# 用于生成 Python 和 TypeScript 代码
+
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/taiji-ai/hermes-proto
+
+plugins:
+  # Python gRPC
+  - remote: buf.build/protocolbuffers/plugins/python:v26.1.0
+    out: gen/py
+    opt:
+      - python_reinterpret_offsets=false
+
+  # Python gRPC
+  - remote: buf.build/grpc/plugins/python:v1.4.1
+    out: gen/py
+    opt:
+      - grpc_python_generic_service=true
+
+  # TypeScript (可选，需要单独的工具)
+  # - remote: buf.build/bufbuild/plugins/typescript:v1.4.0
+  #   out: gen/ts
+
+  # js/protobuf (可选)
+  # - remote: buf.build/bufbuild/plugins/js:v3.0.0
+  #   out: gen/js
+  #   opt:
+  #     - target=ts

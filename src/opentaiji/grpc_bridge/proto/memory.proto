@@ -1,0 +1,108 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - HermesMemory Service
+#
+# 记忆存取服务接口定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "google/protobuf/empty.proto";
+import "hermes/v1/common.proto";
+
+option py_generic_services = true;
+
+// ============================================================
+// HermesMemory Service - 记忆存取服务
+// ============================================================
+
+service HermesMemory {
+  // 保存记忆
+  rpc Save(SaveRequest) returns (SaveResponse);
+
+  // 搜索记忆
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // 获取上下文（为当前对话组装相关记忆）
+  rpc GetContext(GetContextRequest) returns (GetContextResponse);
+
+  // 删除记忆
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+
+  // 列出可用记忆后端
+  rpc ListBackends(google.protobuf.Empty) returns (MemoryBackendList);
+}
+
+// ============================================================
+// 消息类型定义
+// ============================================================
+
+message SaveRequest {
+  string content = 1;                       // 记忆内容
+  MemoryType type = 2;                       // 记忆类型
+  optional string session_id = 3;             // 关联会话
+  optional string tenant_id = 4;             // 租户 ID（多租户隔离）
+  map<string, string> metadata = 5;         // 附加元数据
+  optional MemoryBackend backend = 6;         // 目标后端（使用默认）
+  repeated float embedding = 7;              // 可选的预计算嵌入向量
+}
+
+message SaveResponse {
+  string memory_id = 1;                      // 记忆 ID
+  bool deduplicated = 2;                    // 是否去重（合并到已有记忆）
+  optional string error_msg = 3;             // 错误信息
+  optional ErrorDetail error = 4;           // 错误详情
+}
+
+message SearchRequest {
+  string query = 1;                         // 搜索查询文本
+  optional MemoryType type = 2;             // 按类型过滤
+  optional uint32 limit = 3;                // 返回条数上限（默认 10）
+  optional float min_score = 4;             // 最低相似度阈值（0.0-1.0）
+  optional string session_id = 5;            // 限制到指定会话
+  optional string tenant_id = 6;             // 租户 ID
+  optional MemoryBackend backend = 7;         // 指定搜索后端
+  repeated float query_embedding = 8;        // 可选的预计算查询向量
+}
+
+message SearchResponse {
+  repeated MemoryItem results = 1;          // 搜索结果
+  uint32 total_count = 2;                   // 总匹配数
+  float search_time_ms = 3;                 // 搜索耗时（毫秒）
+  optional ErrorDetail error = 4;           // 错误详情
+}
+
+message GetContextRequest {
+  string query = 1;                         // 当前上下文查询
+  optional uint32 max_tokens = 2;           // 上下文 Token 预算
+  optional string session_id = 3;           // 会话 ID
+  optional string tenant_id = 4;            // 租户 ID
+}
+
+message GetContextResponse {
+  string context_block = 1;                 // 格式化的上下文文本块
+  repeated MemoryItem items = 2;           // 组成上下文的具体记忆项
+  uint32 total_tokens = 3;                  // 总 Token 数
+  optional ErrorDetail error = 4;           // 错误详情
+}
+
+message DeleteRequest {
+  string memory_id = 1;                      // 记忆 ID
+  optional string tenant_id = 2;             // 租户 ID
+}
+
+message DeleteResponse {
+  bool success = 1;
+  optional ErrorDetail error = 2;           // 错误详情
+}
+
+message MemoryBackendList {
+  repeated MemoryBackendInfo backends = 1;
+}
+
+message MemoryBackendInfo {
+  MemoryBackend backend = 1;
+  string name = 2;
+  bool is_available = 3;                    // 是否可用
+  optional string description = 4;
+}

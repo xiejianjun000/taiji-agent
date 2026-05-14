@@ -1,0 +1,14 @@
+# Buf 配置
+# 用于 lint 和 breaking change 检测
+
+version: v2
+lint:
+  use:
+    - DEFAULT
+    - COMMENTS
+  except:
+    - PACKAGE_VERSION_SUFFIX
+  allow_comment_ignores: true
+breaking:
+  use:
+    - FILE

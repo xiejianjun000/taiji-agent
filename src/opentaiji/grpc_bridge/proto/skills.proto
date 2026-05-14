@@ -1,0 +1,122 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - HermesSkills Service
+#
+# 技能管理服务接口定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "hermes/v1/common.proto";
+
+option py_generic_services = true;
+
+// ============================================================
+// HermesSkills Service - 技能管理服务
+// ============================================================
+
+service HermesSkills {
+  // 列出所有可用技能
+  rpc ListSkills(ListSkillsRequest) returns (SkillList);
+
+  // 获取单个技能详情
+  rpc GetSkill(GetSkillRequest) returns (SkillResponse);
+
+  // 执行技能
+  rpc ExecuteSkill(ExecuteSkillRequest) returns (ExecuteSkillResponse);
+
+  // 流式执行技能
+  rpc StreamExecuteSkill(ExecuteSkillRequest) returns (stream SkillExecutionChunk);
+
+  // 创建新技能
+  rpc CreateSkill(CreateSkillRequest) returns (SkillResponse);
+
+  // 更新技能
+  rpc UpdateSkill(UpdateSkillRequest) returns (SkillResponse);
+
+  // 删除技能
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse);
+}
+
+// ============================================================
+// 消息类型定义
+// ============================================================
+
+message ListSkillsRequest {
+  optional string category = 1;             // 按类别过滤
+  optional string search = 2;               // 关键词搜索
+  optional uint32 limit = 3;                // 返回条数上限
+  optional uint32 offset = 4;               // 分页偏移
+}
+
+message GetSkillRequest {
+  string skill_id = 1;                      // 技能 ID
+}
+
+message SkillList {
+  repeated Skill skills = 1;
+  uint32 total_count = 2;
+  optional ErrorDetail error = 3;           // 错误详情
+}
+
+message SkillResponse {
+  bool success = 1;
+  optional Skill skill = 2;                 // 技能详情
+  optional ErrorDetail error = 3;           // 错误详情
+}
+
+message ExecuteSkillRequest {
+  string skill_id = 1;                      // 技能 ID
+  string task = 2;                          // 任务描述
+  map<string, string> parameters = 3;        // 执行参数
+  optional string session_id = 4;           // 会话 ID
+  optional bool stream = 5;                 // 是否流式执行
+}
+
+message ExecuteSkillResponse {
+  string result = 1;                        // 执行结果
+  bool success = 2;                         // 是否成功
+  optional string error = 3;                // 错误信息
+  optional TokenUsage usage = 4;            // Token 用量
+  float execution_time_ms = 5;              // 执行耗时
+  optional ErrorDetail error_detail = 6;    // 错误详情
+}
+
+message SkillExecutionChunk {
+  oneof chunk_type {
+    string text_delta = 1;                  // 文本增量
+    string tool_call = 2;                   // 工具调用信息
+    string progress = 3;                   // 进度信息
+  }
+  uint32 index = 4;
+  optional bool done = 5;                   // 是否完成
+  optional ErrorDetail error = 6;           // 错误详情
+}
+
+message CreateSkillRequest {
+  string name = 1;                          // 技能名称
+  string description = 2;                  // 技能描述
+  string content = 3;                       // SKILL.md 内容
+  optional string category = 4;             // 类别
+  repeated string tags = 5;                 // 标签
+  map<string, string> metadata = 6;        // 扩展元数据
+}
+
+message UpdateSkillRequest {
+  string skill_id = 1;                      // 技能 ID
+  optional string name = 2;
+  optional string description = 3;
+  optional string content = 4;
+  optional string category = 5;
+  repeated string tags = 6;
+  map<string, string> metadata = 7;
+}
+
+message DeleteSkillRequest {
+  string skill_id = 1;
+}
+
+message DeleteSkillResponse {
+  bool success = 1;
+  optional ErrorDetail error = 2;           // 错误详情
+}

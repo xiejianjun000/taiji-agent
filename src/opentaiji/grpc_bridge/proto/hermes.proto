@@ -1,0 +1,62 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - Main Proto File
+#
+# 主 proto 文件，导入并聚合所有服务定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "google/protobuf/empty.proto";
+import "hermes/v1/common.proto";
+import "hermes/v1/hermes_provider.proto";
+import "hermes/v1/memory.proto";
+import "hermes/v1/skills.proto";
+import "hermes/v1/agent.proto";
+import "hermes/v1/taiji_verify.proto";
+
+option go_package = "github.com/taiji-ai/hermes-proto/gen/go/hermes/v1";
+option java_package = "com.taiji.hermes.v1";
+option java_multiple_files = true;
+
+// ============================================================
+// 聚合的 Hermes Service（可选，方便一次性导入）
+// ============================================================
+
+// 聚合服务定义，方便客户端一次性连接所有服务
+service HermesAllInOne {
+  // HermesProvider 服务
+  rpc Chat(ChatRequest) returns (ChatResponse);
+  rpc StreamChat(ChatRequest) returns (stream ChatChunk);
+  rpc GetEmbedding(EmbeddingRequest) returns (EmbeddingResponse);
+  rpc GetModels(google.protobuf.Empty) returns (ModelList);
+
+  // HermesMemory 服务
+  rpc SaveMemory(SaveRequest) returns (SaveResponse);
+  rpc SearchMemory(SearchRequest) returns (SearchResponse);
+  rpc GetContext(GetContextRequest) returns (GetContextResponse);
+  rpc DeleteMemory(DeleteRequest) returns (DeleteResponse);
+  rpc ListMemoryBackends(google.protobuf.Empty) returns (MemoryBackendList);
+
+  // HermesSkills 服务
+  rpc ListSkills(ListSkillsRequest) returns (SkillList);
+  rpc GetSkill(GetSkillRequest) returns (SkillResponse);
+  rpc ExecuteSkill(ExecuteSkillRequest) returns (ExecuteSkillResponse);
+  rpc StreamExecuteSkill(ExecuteSkillRequest) returns (stream SkillExecutionChunk);
+  rpc CreateSkill(CreateSkillRequest) returns (SkillResponse);
+  rpc UpdateSkill(UpdateSkillRequest) returns (SkillResponse);
+  rpc DeleteSkill(DeleteSkillRequest) returns (DeleteSkillResponse);
+
+  // HermesAgent 服务
+  rpc RunTask(TaskRequest) returns (TaskResponse);
+  rpc StreamTask(TaskRequest) returns (stream TaskChunk);
+  rpc GetAgentStatus(AgentStatusRequest) returns (AgentStatus);
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+  rpc GetTaskHistory(TaskHistoryRequest) returns (TaskHistoryResponse);
+
+  // TaijiVerify 服务
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+  rpc BatchVerify(BatchVerifyRequest) returns (BatchVerifyResponse);
+  rpc GetVerifyRules(google.protobuf.Empty) returns (RuleList);
+  rpc GetVerifyHistory(HistoryRequest) returns (HistoryResponse);
+}

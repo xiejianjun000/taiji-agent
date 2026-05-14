@@ -1,0 +1,88 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - HermesProvider Service
+#
+# LLM 聊天与嵌入服务接口定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "hermes/v1/common.proto";
+
+option py_generic_services = true;
+
+// ============================================================
+// HermesProvider Service - LLM 聊天与嵌入服务
+// ============================================================
+
+service HermesProvider {
+  // 非流式 Chat（用于简单问答场景）
+  rpc Chat(ChatRequest) returns (ChatResponse);
+
+  // 流式 Chat（Server Streaming，LLM 推流，推荐模式）
+  rpc StreamChat(ChatRequest) returns (stream ChatChunk);
+
+  // 获取文本嵌入向量
+  rpc GetEmbedding(EmbeddingRequest) returns (EmbeddingResponse);
+
+  // 获取可用模型列表
+  rpc GetModels(google.protobuf.Empty) returns (ModelList);
+}
+
+// ============================================================
+// 消息类型定义
+// ============================================================
+
+message ChatRequest {
+  repeated Message messages = 1;            // 对话历史（必填）
+  repeated ToolDefinition tools = 2;        // 可用工具列表
+  string model = 3;                         // 模型名称（可选，使用默认）
+  optional float temperature = 4;           // 温度（0.0-2.0）
+  optional uint32 max_tokens = 5;            // 最大生成 Token 数
+  optional bool stream = 6;                 // 是否流式（等效于调用 StreamChat）
+  optional string system_prompt = 7;        // 可选的 system prompt 覆盖
+  optional string session_id = 8;          // 会话 ID（用于记忆关联）
+  map<string, string> metadata = 9;         // 自定义元数据（追踪用）
+}
+
+message ChatResponse {
+  string content = 1;                       // 生成的文本内容
+  repeated ToolCall tool_calls = 2;         // 工具调用列表
+  FinishReason finish_reason = 3;           // 完成原因
+  TokenUsage usage = 4;                     // Token 用量
+  string model = 5;                         // 实际使用的模型
+  optional string session_id = 6;           // 会话 ID
+  optional ErrorDetail error = 7;           // 错误详情（成功时不设置）
+}
+
+message ChatChunk {
+  oneof chunk_type {
+    string content_delta = 1;               // 文本增量（流式内容）
+    ToolCallDelta tool_call_delta = 2;     // 工具调用增量
+  }
+  optional FinishReason finish_reason = 3;  // 完成原因（仅在最后一个 chunk 设置）
+  optional TokenUsage usage = 4;            // Token 用量（仅在最后一个 chunk 设置）
+  uint32 index = 5;                         // Chunk 序号（用于排序和去重）
+  optional ErrorDetail error = 6;          // 错误详情
+}
+
+message EmbeddingRequest {
+  string text = 1;                          // 需要嵌入的文本
+  optional string model = 2;                // 嵌入模型名称
+  optional string session_id = 3;           // 会话 ID
+}
+
+message EmbeddingResponse {
+  repeated float embedding = 1;             // 嵌入向量
+  uint32 dimensions = 2;                   // 向量维度
+  string model = 3;                         // 使用的模型
+  TokenUsage usage = 4;                     // Token 用量
+  optional ErrorDetail error = 5;           // 错误详情
+}
+
+message ModelList {
+  repeated ModelInfo models = 1;
+  optional ErrorDetail error = 2;           // 错误详情
+}

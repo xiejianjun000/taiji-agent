@@ -1,0 +1,116 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - HermesAgent Service
+#
+# 完整代理执行服务接口定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "hermes/v1/common.proto";
+
+option py_generic_services = true;
+
+// ============================================================
+// HermesAgent Service - 完整代理执行服务
+// ============================================================
+
+service HermesAgent {
+  // 非流式运行任务（Hermes 自主执行完整任务，返回最终结果）
+  rpc RunTask(TaskRequest) returns (TaskResponse);
+
+  // 流式运行任务（实时推送执行过程）
+  rpc StreamTask(TaskRequest) returns (stream TaskChunk);
+
+  // 获取 Agent 状态
+  rpc GetStatus(AgentStatusRequest) returns (AgentStatus);
+
+  // 取消正在运行的任务
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse);
+
+  // 获取任务执行历史
+  rpc GetTaskHistory(TaskHistoryRequest) returns (TaskHistoryResponse);
+}
+
+// ============================================================
+// 消息类型定义
+// ============================================================
+
+message TaskRequest {
+  string task = 1;                          // 任务描述（必填）
+  optional string system_prompt = 2;        // 系统提示词
+  optional string model = 3;                // 模型选择
+  optional uint32 max_iterations = 4;       // 最大迭代次数（默认 25）
+  optional float temperature = 5;           // 温度
+  optional string session_id = 6;            // 会话 ID
+  optional string tenant_id = 7;             // 租户 ID
+  map<string, string> metadata = 8;         // 自定义元数据
+  optional bool enable_hitl = 9;           // 启用人工干预
+  optional uint32 hitl_timeout_seconds = 10; // 人工审批超时（秒）
+}
+
+message TaskResponse {
+  string result = 1;                        // 最终结果文本
+  bool success = 2;                          // 是否成功
+  uint32 iterations = 3;                     // 实际迭代次数
+  TokenUsage usage = 4;                     // Token 用量
+  float execution_time_ms = 5;              // 执行耗时
+  repeated TaskStep steps = 6;              // 执行步骤摘要
+  optional string error = 7;                // 错误信息
+  AgentStatusEnum final_status = 8;        // 最终状态
+  optional ErrorDetail error_detail = 9;   // 错误详情
+}
+
+message TaskChunk {
+  oneof chunk_type {
+    string text_delta = 1;                  // 文本增量
+    string thought = 2;                      // 思考过程
+    TaskStep step = 3;                      // 步骤信息
+    string tool_call = 4;                   // 工具调用
+    string tool_result = 5;                 // 工具结果
+    HumanInputRequest hitl = 6;             // 人工干预请求
+  }
+  uint32 index = 7;
+  optional AgentStatusEnum status = 8;
+  optional bool done = 9;                   // 是否完成
+  optional ErrorDetail error = 10;          // 错误详情
+}
+
+message AgentStatusRequest {
+  string session_id = 1;                    // 会话 ID
+  optional string tenant_id = 2;             // 租户 ID
+}
+
+message AgentStatus {
+  AgentStatusEnum status = 1;               // 当前状态
+  optional string current_task = 2;          // 当前任务
+  optional uint32 current_iteration = 3;     // 当前迭代次数
+  optional uint32 total_iterations = 4;      // 总迭代次数
+  optional TokenUsage usage = 5;             // Token 用量
+  optional float uptime_seconds = 6;        // 运行时间
+  optional string session_id = 7;           // 会话 ID
+  optional ErrorDetail error = 8;           // 错误详情
+}
+
+message CancelTaskRequest {
+  string session_id = 1;                    // 会话 ID
+  optional string reason = 2;               // 取消原因
+}
+
+message CancelTaskResponse {
+  bool success = 1;
+  optional string cancelled_step = 2;       // 取消时的步骤
+  optional ErrorDetail error = 3;           // 错误详情
+}
+
+message TaskHistoryRequest {
+  optional string session_id = 1;
+  optional uint32 limit = 2;
+  optional uint32 offset = 3;
+}
+
+message TaskHistoryResponse {
+  repeated TaskResponse tasks = 1;
+  uint32 total_count = 2;
+  optional ErrorDetail error = 3;           // 错误详情
+}

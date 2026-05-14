@@ -1,0 +1,108 @@
+# Copyright 2024 Taiji Agent Project
+# gRPC Bridge - Taiji Verify Service
+#
+# 太极验证服务接口定义
+
+syntax = "proto3";
+
+package hermes.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+option py_generic_services = true;
+
+// ============================================================
+// TaijiVerify Service - 太极验证服务
+// ============================================================
+
+service TaijiVerify {
+  // 执行太极验证
+  rpc Verify(VerifyRequest) returns (VerifyResponse);
+
+  // 批量验证
+  rpc BatchVerify(BatchVerifyRequest) returns (BatchVerifyResponse);
+
+  // 获取验证规则
+  rpc GetRules(google.protobuf.Empty) returns (RuleList);
+
+  // 获取验证历史
+  rpc GetHistory(HistoryRequest) returns (HistoryResponse);
+}
+
+// ============================================================
+// 消息类型定义
+// ============================================================
+
+message VerifyRequest {
+  string content = 1;                        // 待验证内容
+  string content_type = 2;                  // 内容类型：text/image/audio/document
+  optional string ruleset = 3;              // 规则集名称（默认使用十三神规则）
+  map<string, string> context = 4;         // 上下文信息
+  optional string tenant_id = 5;            // 租户 ID
+}
+
+message VerifyResponse {
+  bool passed = 1;                          // 是否通过
+  string result = 2;                        // 验证结果描述
+  repeated VerifyResultItem details = 3;    // 详细验证结果
+  float score = 4;                          // 综合评分 (0.0 - 1.0)
+  repeated string warnings = 5;            // 警告信息
+  repeated string errors = 6;              // 错误信息
+  google.protobuf.Timestamp verified_at = 7; // 验证时间
+  optional ErrorDetail error = 8;          // 错误详情
+}
+
+message VerifyResultItem {
+  string rule_id = 1;                       // 规则 ID
+  string rule_name = 2;                    // 规则名称
+  bool passed = 3;                          // 是否通过
+  float score = 4;                          // 单项评分
+  string message = 5;                       // 结果描述
+  optional google.protobuf.Struct details = 6; // 详细数据
+}
+
+message BatchVerifyRequest {
+  repeated VerifyRequest items = 1;          // 验证项列表
+  optional bool stop_on_first_error = 2;   // 遇到首个错误时是否停止
+}
+
+message BatchVerifyResponse {
+  repeated VerifyResponse results = 1;      // 各验证项结果
+  uint32 total_count = 2;                  // 总数量
+  uint32 passed_count = 3;                 // 通过数量
+  uint32 failed_count = 4;                 // 失败数量
+  float total_time_ms = 5;                 // 总耗时
+  optional ErrorDetail error = 6;          // 错误详情
+}
+
+message RuleList {
+  repeated RuleInfo rules = 1;
+}
+
+message RuleInfo {
+  string id = 1;                            // 规则 ID
+  string name = 2;                          // 规则名称
+  string description = 3;                   // 规则描述
+  string category = 4;                     // 类别
+  bool is_active = 5;                      // 是否启用
+  optional float weight = 6;               // 权重
+  repeated string tags = 7;                // 标签
+  optional google.protobuf.Struct config = 8; // 规则配置
+}
+
+message HistoryRequest {
+  optional string tenant_id = 1;            // 租户 ID
+  optional uint32 limit = 2;               // 返回条数
+  optional uint32 offset = 3;              // 分页偏移
+  optional google.protobuf.Timestamp start_time = 4; // 开始时间
+  optional google.protobuf.Timestamp end_time = 5;   // 结束时间
+  optional bool passed_only = 6;          // 仅返回通过的
+}
+
+message HistoryResponse {
+  repeated VerifyResponse items = 1;        // 历史验证记录
+  uint32 total_count = 2;                 // 总数量
+  optional ErrorDetail error = 3;          // 错误详情
+}
