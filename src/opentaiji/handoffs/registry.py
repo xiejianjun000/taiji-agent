@@ -1,6 +1,6 @@
 """
 Agent Registry - Agent注册表
-管理多Agent注册和发现
+提供Agent注册、查找和管理功能
 """
 
 from __future__ import annotations
@@ -135,6 +135,7 @@ class AgentRegistry:
                 or any(query_lower in tag.lower() for tag in metadata.tags)
             ):
                 results.append((agent_id, agent, metadata))
+        results.sort(key=lambda x: x[2].name)
         return results
 
     def list_all(self) -> list[tuple[str, Any, AgentMetadata]]:

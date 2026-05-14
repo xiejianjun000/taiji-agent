@@ -1,6 +1,6 @@
 """
 OpenTaiji Observability Module
-全链路追踪系统 - 参考LangSmith设计
+可观测性模块 - 集成LangSmith导出器
 """
 
 from .exporter import (
