@@ -744,7 +744,7 @@ jobs:
 
 ```python
 # tests/mock_data.py 示例
-from opentaiji.wfgy.verifier import WFGYRule
+from opentaiji.wfgy.verifier import Taiji VerifyRule
 
 # Mock 环评知识库
 MOCK_EIA_KNOWLEDGE = [
@@ -916,7 +916,7 @@ markers =
 ```python
 # tests/conftest.py
 import pytest
-from opentaiji.wfgy.verifier import WFGYVerifier
+from opentaiji.wfgy.verifier import Taiji VerifyVerifier
 from opentaiji.events.bus import EventBus
 from opentaiji.multiagent.coordinator import MultiAgentCoordinator
 
@@ -934,7 +934,7 @@ def event_bus():
 @pytest.fixture
 def wfgy_verifier():
     """创建一个配置了环评知识的验证器"""
-    verifier = WFGYVerifier(minimum_score=0.7)
+    verifier = Taiji VerifyVerifier(minimum_score=0.7)
     verifier.add_knowledge("环评", "环境影响评价", "环评法")
     verifier.add_knowledge("SO2", "二氧化硫", "大气污染防治法")
     return verifier
