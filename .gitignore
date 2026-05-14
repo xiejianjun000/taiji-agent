@@ -49,3 +49,6 @@ Thumbs.db
 # Project specific
 traces/
 checkpoints/
+
+# 参考代码子模块（不应提交）
+.repos/
