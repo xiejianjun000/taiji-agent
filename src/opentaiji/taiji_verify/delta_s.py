@@ -6,10 +6,10 @@ DeltaS (阴阳距) - Taiji Verify 核心计算模块
       G = 知识向量(Embedding of ground truth / knowledge base)
 
 闸区体系:
-- safe (<0.3): 安全区，输出可信
-- transit (0.3-0.5): 过渡区，需要关注
-- risk (0.5-0.7): 风险区，建议修正
-- danger (>0.7): 危险区，必须拦截
+- safe (<0.4): 安全区，输出可信
+- transit (0.4-0.6): 过渡区，需要关注
+- risk (0.6-0.85): 风险区，建议修正
+- danger (>=0.85): 危险区，必须拦截
 
 数据来源：基于阶段一基线数据推算与行业同类系统对标
 """
@@ -27,19 +27,19 @@ from numpy.linalg import norm
 
 class GateZone(str, Enum):
     """阴阳距闸区"""
-    SAFE = "safe"           # < 0.3
-    TRANSIT = "transit"     # 0.3 - 0.5
-    RISK = "risk"           # 0.5 - 0.7
-    DANGER = "danger"       # > 0.7
+    SAFE = "safe"           # < 0.40
+    TRANSIT = "transit"     # 0.40 - 0.60
+    RISK = "risk"           # 0.60 - 0.85
+    DANGER = "danger"       # >= 0.85
 
     @classmethod
     def from_delta(cls, delta_s: float) -> GateZone:
         """根据ΔS值返回对应闸区"""
-        if delta_s < 0.3:
+        if delta_s < 0.40:
             return cls.SAFE
-        elif delta_s < 0.5:
+        elif delta_s < 0.60:
             return cls.TRANSIT
-        elif delta_s < 0.7:
+        elif delta_s < 0.85:
             return cls.RISK
         else:
             return cls.DANGER
@@ -90,9 +90,9 @@ class DeltaSCalculator:
     def __init__(
         self,
         embedding_dim: int = 768,
-        safe_threshold: float = 0.3,
-        transit_threshold: float = 0.5,
-        risk_threshold: float = 0.7,
+        safe_threshold: float = 0.40,
+        transit_threshold: float = 0.60,
+        risk_threshold: float = 0.85,
     ):
         self.embedding_dim = embedding_dim
         self._thresholds = {
