@@ -1,0 +1,122 @@
+sequenceDiagram
+    participant User as 用户
+    participant Integration as TaijiVerifyIntegration
+    participant Engine as TaijiVerifyEngine
+    participant Embedding as EmbeddingProvider
+    participant Polaris as PolarisCompiler
+    participant DeltaS as ΔS Calculator
+    participant BBMC as 坤守 BBMC
+    participant BBPF as 乾进 BBPF
+    participant BBCR as 复归 BBCR
+    participant BBAM as 巽调 BBAM
+    participant Observe as 观变 GuanObserve
+    participant Detector as FailureModeDetector
+
+    Note over User,Detector: ========== 完整推理循环 (TaijiVerifyEngine.step) ==========
+
+    User->>Integration: 用户输入 (自然语言)
+    Integration->>Integration: pre_process hook
+
+    Integration->>Polaris: compile_goal(user_input)
+    Polaris->>Polaris: Step 1: GOAL_COMPILATION
+    Polaris->>Polaris: Step 2: TASK_GRAPH
+    Polaris->>Polaris: Step 3: ATOM_TABLE
+    Polaris-->>Integration: GoalCompilation + TaskGraph
+
+    Integration->>Embedding: embed(user_input)
+    Embedding-->>Integration: I (嵌入向量)
+
+    alt 无预存目标G
+        Integration->>Embedding: embed(goal_from_compilation)
+        Embedding-->>Integration: G (目标嵌入)
+    end
+
+    Integration->>Engine: step(user_input, context)
+
+    Note over Engine,Detector: ---------- 主循环迭代 ----------
+
+    loop 每步推理
+        Engine->>DeltaS: calculate_delta_s(I, G)
+        DeltaS->>DeltaS: cos(I, G) → ΔS = 1 - cos
+        DeltaS->>DeltaS: 锚点扩展 (if anchors exist)
+        DeltaS->>DeltaS: 闸区判定 (safe/transit/risk/danger)
+        DeltaS-->>Engine: DeltaSResult
+
+        Engine->>Observe: record_snapshot(ΔS, round_id)
+        Observe-->>Engine: GuanObserveSnapshot
+
+        Engine->>BBMC: kun_guard(I, G, context_tokens)
+        BBMC->>BBMC: m = cos(I, G)
+        BBMC->>BBMC: c = clip(context/100, 0.2, 1.5)
+        BBMC->>BBMC: B = I - G + m*c²
+        BBMC->>BBMC: norm_B = ‖B‖₂
+        BBMC->>BBMC: hazard判定 + 残差投影最小化
+        BBMC-->>Engine: KunGuardResult
+
+        alt hazard == COLLAPSE OR λ == chaotic
+            Engine->>BBCR: fu_return(engine_state)
+            BBCR->>BBCR: Phase 1: COLLAPSE (记录崩溃点)
+            BBCR->>BBCR: Phase 2: RESET (回溯convergent节点)
+            BBCR->>BBCR: Phase 3: REBIRTH (S_anchor+G)/2
+            BBCR-->>Engine: FuReturnResult
+            Engine->>Engine: I = new_state, 重新开始循环
+        end
+
+        Engine->>Engine: compute_lambda(ΔS_t, ΔS_t-1, history)
+        Engine-->>Engine: λ状态 (convergent/recursive/divergent/chaotic)
+
+        Engine->>BBPF: qian_advance(I, G, ΔS_prev, ΔS_now)
+        BBPF->>BBPF: Phase 1: 耦合器W_c计算
+        BBPF->>BBPF: Phase 2: k_paths 多路径扰动
+        BBPF->>BBPF: Phase 3: f_S = 1/(1+mean(Δ))
+        BBPF->>BBPF: Phase 4: 桥接判定
+        BBPF-->>Engine: QianAdvanceResult
+
+        alt bridge_enabled
+            Engine->>Engine: 选用最优候选路径
+        end
+
+        Engine->>BBAM: xun_tune(attention_scores, W_c)
+        BBAM->>BBAM: σ(a) → gate_factor = exp(-γ*σ)
+        BBAM->>BBAM: α_blend = clip(0.50 + k_c*tanh(W_c), 0.35, 0.65)
+        BBAM->>BBAM: 注意力混合 + softmax归一化
+        BBAM-->>Engine: XunTuneResult
+
+        Engine->>Detector: detect_all(state)
+        Detector->>Detector: 运行16种失败模式检测
+        Detector-->>Engine: List~FailureDetection~
+
+        alt 检测到失败模式
+            Engine->>Engine: 执行修复动作
+            Engine->>Observe: record_failure(failure)
+        end
+
+        Engine->>Polaris: audit_downstream_leak(output, round_lock)
+        Polaris->>Polaris: 检查输出类型匹配
+        Polaris-->>Engine: DownstreamLeakAuditResult
+
+        alt Leak Detected
+            Engine->>Engine: 回合失败, 移除泄漏内容
+            Engine->>Polaris: 重新执行(仅合法输出)
+        end
+
+        Engine->>Engine: I = select_best_candidate(candidates)
+        Engine->>Engine: 更新 TaijiEngineState
+        Engine->>Observe: record_state(state)
+    end
+
+    Note over Engine,Detector: ---------- 循环结束 ----------
+
+    Engine->>Polaris: record_closure(atom_results)
+    Polaris-->>Engine: ClosureRecord
+
+    Engine-->>Integration: step结果 (ΔS, λ, 动作, 输出)
+
+    Integration->>Integration: post_process hook
+
+    alt passed
+        Integration-->>User: 最终输出
+    else 需降级
+        Integration->>Integration: on_error fallback
+        Integration-->>User: 降级输出 / 请求澄清
+    end

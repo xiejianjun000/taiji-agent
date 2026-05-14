@@ -1,0 +1,359 @@
+classDiagram
+    %% ==================== 核心数据模型 ====================
+    class DeltaSResult {
+        +float delta_s
+        +float similarity_raw
+        +str zone
+        +int zone_enum
+        +Optional~float~ sim_est
+        +Optional~Dict~str, float~~ anchor_breakdown
+    }
+
+    class AnchorSet {
+        +List~Tuple~ndarray, ndarray~~ entities
+        +List~Tuple~ndarray, ndarray~~ relations
+        +List~Tuple~ndarray, ndarray~~ constraints
+    }
+
+    class KunGuardResult {
+        +ndarray B_residual
+        +float norm_B
+        +str hazard
+        +str memory_action
+        +float delta_s
+        +bool minimization_applied
+    }
+
+    class KunGuardConfig {
+        +float B_c
+        +float warning_ratio
+        +float record_threshold
+        +float exemplar_threshold
+        +float projection_decay
+    }
+
+    class CandidatePath {
+        +ndarray state
+        +float delta_s
+        +float noise_level
+    }
+
+    class QianAdvanceResult {
+        +List~CandidatePath~ candidates
+        +bool bridge_enabled
+        +Optional~Dict~ bridge_record
+        +float coupler_output
+        +float stability_score
+    }
+
+    class QianAdvanceConfig {
+        +int k_paths
+        +float noise_scale
+        +float theta_c
+        +float zeta_min
+        +float omega
+        +float phi_delta
+        +float hysteresis_h
+    }
+
+    class FuReturnResult {
+        +str action_taken
+        +int rollback_count
+        +Optional~ndarray~ anchor_state
+        +Optional~ndarray~ new_state
+        +Optional~float~ recovery_delta_s
+        +Optional~str~ failure_reason
+    }
+
+    class FuReturnConfig {
+        +float B_c
+        +float eps
+        +int max_rollback
+        +float rebirth_beta
+    }
+
+    class XunTuneResult {
+        +ndarray modulated_attention
+        +float gate_factor
+        +float alpha_blend
+        +float attention_std
+        +float gamma_used
+    }
+
+    class XunTuneConfig {
+        +float gamma
+        +float k_c
+        +str alpha_ref
+        +Tuple~float, float~ alpha_blend_range
+    }
+
+    class MemoryRecord {
+        +str topic
+        +str module
+        +float delta_s
+        +str lambda_state
+        +float timestamp
+        +str insight_encoded
+    }
+
+    class GuanObserveSnapshot {
+        +float timestamp
+        +int round_id
+        +ndarray I
+        +ndarray G
+        +float delta_s
+        +str lambda_state
+        +float f_S
+        +float norm_B
+        +str hazard
+        +float gate_factor
+        +Optional~str~ active_atom
+        +str zone
+    }
+
+    class GuanObserveMetrics {
+        +List~float~ delta_s_trend
+        +List~str~ lambda_transitions
+        +int collapse_count
+        +int recovery_count
+        +float avg_stability
+        +List~str~ failure_modes_triggered
+    }
+
+    class FailureDetection {
+        +int failure_id
+        +str failure_name
+        +bool detected
+        +float severity
+        +str trigger_module
+        +str suggested_action
+        +Dict~str, float~ raw_indicators
+    }
+
+    %% ==================== 北辰编译器模型 ====================
+    class GoalCompilation {
+        +str goal_id
+        +str goal_class
+        +str status
+        +bool mixed_goal_flag
+        +str original_request
+    }
+
+    class TaskGraph {
+        +Dict~str, AtomRecord~ atom_nodes
+        +List~Tuple~str, str~~ dependency_edges
+        +List~Tuple~str, str~~ blocking_edges
+    }
+
+    class AtomRecord {
+        +str atom_id
+        +str atom_label
+        +AtomClass atom_class
+        +str target_object
+        +bool truth_bearing_flag
+        +bool expression_flag
+        +bool closure_critical_flag
+        +bool activation_flag
+        +bool legality_floor_flag
+        +bool claim_ceiling_flag
+        +str legal_output_kind
+        +List~str~ blocked_by
+        +str may_start_only_if
+        +str success_test
+        +str failure_test
+        +str claim_ceiling
+        +AtomState current_state
+        +List~str~ downstream_atoms
+    }
+
+    class ExecutionTokenBoard {
+        +str atom_id
+        +TokenStatus token_status
+        +Optional~DenialClass~ denial_class
+        +Optional~str~ denial_reason
+    }
+
+    class RoundLock {
+        +str active_atom_id
+        +str only_do
+        +str legal_output_kind
+    }
+
+    class DownstreamLeakAuditResult {
+        +str active_atom_id
+        +str expected_output_kind
+        +bool leak_detected
+        +Optional~AtomClass~ leak_source_class
+        +int leak_fragment_count
+        +str leak_disposition
+    }
+
+    class ClosureRecord {
+        +bool verified
+        +List~str~ missing
+        +float residual_delta_s
+        +str result
+        +Dict~str, str~ atom_results
+    }
+
+    class TaijiEngineState {
+        +ndarray I_current
+        +ndarray G_target
+        +int context_tokens
+        +List~float~ delta_s_history
+        +List~str~ lambda_history
+        +List~MemoryRecord~ node_history
+        +Optional~Dict~ task_graph
+        +Optional~str~ active_atom
+        +int round_id
+        +float B_c
+        +float gamma
+        +float theta_c
+        +float zeta_min
+        +float k_c
+    }
+
+    %% ==================== 引擎接口 ====================
+    class TaijiVerifyEngine {
+        +Dict config
+        +TaijiEngineState state
+        +__init__(config)
+        +step(user_input, context) Dict
+        +compile_goal(user_input) Dict
+        +audit_leak(output, expected_kind) bool
+        +export_semantic_tree(format) str
+        +get_metrics() Dict
+    }
+
+    class PolarisCompiler {
+        +Optional~Callable~ llm_provider
+        +compile(user_request) GoalCompilation
+        +build_task_graph(compilation) TaskGraph
+        +build_atom_table(task_graph) Dict~str, AtomRecord~
+        +issue_tokens(atom_table) List~ExecutionTokenBoard~
+        +lock_round(token_boards) Optional~RoundLock~
+        +audit_downstream_leak(output, round_lock) DownstreamLeakAuditResult
+        +record_closure(atom_results) ClosureRecord
+    }
+
+    class FailureModeDetector {
+        +Dict~int, Callable~ detectors
+        +detect_all(state) List~FailureDetection~
+        +detect_by_id(failure_id, state) FailureDetection
+    }
+
+    class VectorMemoryStore {
+        +str collection_name
+        +save(record) str
+        +search(query_vector, k) List~MemoryRecord~
+        +get_recent(n) List~MemoryRecord~
+    }
+
+    class EmbeddingProvider {
+        <<interface>>
+        +embed(text) ndarray
+    }
+
+    class TaijiVerifyIntegration {
+        +bool enabled
+        +TaijiVerifyEngine engine
+        +str compat_mode
+        +pre_process(user_input, context) Dict
+        +post_process(llm_output, round_state) Dict
+        +on_error(error, context) Dict
+    }
+
+    %% ==================== 关系映射 ====================
+
+    %% 引擎与子模块组合关系
+    TaijiVerifyEngine *-- TaijiEngineState : 包含
+    TaijiVerifyEngine *-- PolarisCompiler : 包含
+    TaijiVerifyEngine *-- FailureModeDetector : 包含
+    TaijiVerifyEngine *-- VectorMemoryStore : 包含
+
+    %% 力学模块依赖
+    TaijiVerifyEngine --> "uses" DeltaSResult
+    TaijiVerifyEngine --> "uses" KunGuardResult
+    TaijiVerifyEngine --> "uses" QianAdvanceResult
+    TaijiVerifyEngine --> "uses" FuReturnResult
+    TaijiVerifyEngine --> "uses" XunTuneResult
+    TaijiVerifyEngine --> "uses" GuanObserveSnapshot
+
+    %% ΔS 关系
+    DeltaSResult --> AnchorSet : 可选使用
+
+    %% 坤守关系
+    KunGuardResult --> KunGuardConfig : 配置
+    VectorMemoryStore --> MemoryRecord : 存储
+
+    %% 乾进关系
+    QianAdvanceResult *-- CandidatePath : 包含列表
+    QianAdvanceResult --> QianAdvanceConfig : 配置
+
+    %% 复归关系
+    FuReturnResult --> FuReturnConfig : 配置
+
+    %% 巽调关系
+    XunTuneResult --> XunTuneConfig : 配置
+
+    %% 观变关系
+    GuanObserveMetrics --> GuanObserveSnapshot : 聚合
+    GuanObserveMetrics --> MemoryRecord : 引用
+
+    %% 北辰编译器关系
+    GoalCompilation <.. TaskGraph : 编译产生
+    TaskGraph *-- AtomRecord : 包含
+    ExecutionTokenBoard --> AtomRecord : 评估
+    RoundLock --> ExecutionTokenBoard : 选择
+    ClosureRecord --> AtomRecord : 汇总
+    DownstreamLeakAuditResult --> RoundLock : 审计
+
+    %% 失败模式
+    FailureDetection --> TaijiEngineState : 检测来源
+
+    %% 集成层
+    TaijiVerifyIntegration --> TaijiVerifyEngine : 包装
+    TaijiVerifyIntegration --> EmbeddingProvider : 使用
+
+    %% 枚举
+    class AtomClass {
+        <<enumeration>>
+        DEFINE
+        LOCATE
+        DERIVE
+        PATCH
+        VERIFY
+        DECIDE
+        ORGANIZE
+        WRITE
+    }
+
+    class AtomState {
+        <<enumeration>>
+        NOT_STARTED
+        BLOCKED
+        ACTIVE
+        DEFERRED
+        LOCALLY_DONE
+        VERIFIED
+        REJECTED
+    }
+
+    class TokenStatus {
+        <<enumeration>>
+        GRANTED
+        DENIED
+        PENDING
+    }
+
+    class DenialClass {
+        <<enumeration>>
+        BLOCKED_UPSTREAM
+        NOT_TRUTH_BEARING
+        EXCEEDS_CEILING
+        MISSING_DEPENDENCY
+        CIRCULAR_DEPENDENCY
+        ALREADY_VERIFIED
+        ACTIVE_ATOM_EXISTS
+        LEAK_RISK
+    }
