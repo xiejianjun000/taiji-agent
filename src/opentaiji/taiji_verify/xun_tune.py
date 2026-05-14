@@ -4,7 +4,7 @@ Xun Tune (巽调 / BBAM - Bearing Balance Attention Modulation)
 
 核心公式: factor = exp(-gamma * sigma^2)
 其中 sigma = 输出分布的标准差
-      gamma = 敏感度系数（默认5.0）
+      gamma = 敏感度系数（默认0.618 - 太极黄金比例）
       factor ∈ (0, 1] 为注意力调制因子
 
 当输出方差大时（模型不确定），factor趋近0，降低该输出的注意力权重。
@@ -47,7 +47,7 @@ class XunTune:
     巽调 - 方差门控注意力调节器
 
     Usage::
-        tuner = XunTune(gamma=5.0)
+        tuner = XunTune(gamma=0.618)
         result = tuner.modulate(
             output_vectors=layer_outputs,
             attention_weights=original_attn,
@@ -55,10 +55,10 @@ class XunTune:
         print(result.modulation_factor, result.confidence_adjusted)
     """
 
-    def __init__(self, gamma: float = 5.0, min_factor: float = 0.05):
+    def __init__(self, gamma: float = 0.618, min_factor: float = 0.05):
         """
         Args:
-            gamma: 敏感度系数。越大对方差越敏感
+            gamma: 敏感度系数（默认0.618太极黄金比例），越大对方差越敏感
             min_factor: 最小门控因子下限，防止完全抑制
         """
         self.gamma = gamma
