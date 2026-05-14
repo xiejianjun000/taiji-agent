@@ -1,0 +1,121 @@
+sequenceDiagram
+    participant H as Harness TS<br/>(Agent Loop)
+    participant HC as HermesClient TS<br/>(gRPC Client)
+    participant HS as HermesServer PY<br/>(gRPC Server)
+    participant LLM as LLM API<br/>(OpenAI/Anthropic)
+
+    Note over H,LLM: ═══════ Stream Chat (推荐模式) ═══════
+
+    H->>+HC: streamChat(request)
+    HC->>+HS: gRPC StreamChat(ChatRequest)
+    Note over HS: 消息格式转换<br/>Harness → Hermes 格式
+    HS->>+LLM: stream ChatCompletion
+    LLM-->>-HS: stream token chunks
+
+    loop 每收到一个 token
+        HS-->>HC: ChatChunk{content_delta, index}
+        HC-->>H: yield chunk
+        H->>H: onText() → ws.send(text:delta)
+    end
+
+    alt 有工具调用
+        HS-->>HC: ChatChunk{tool_call_delta, id, name, args}
+        HC-->>H: yield tool_call chunk
+        H->>H: 收集 tool_call 信息
+    end
+
+    HS-->>HC: ChatChunk{finish_reason, usage}
+    HC-->>H: yield final chunk
+    alt finish_reason == TOOL_CALLS
+        H->>H: 解析 tool_calls<br/>执行工具循环
+        H->>H: 将工具结果加入 messages
+        H->>+HC: streamChat(next_request)
+        HC->>+HS: gRPC StreamChat(next_request)
+        Note over HS: 继续下一轮迭代
+    else finish_reason == STOP
+        Note over H: 返回最终文本结果
+    end
+    deactivate HC
+    deactivate HS
+
+    Note over H,LLM: ═══════ Non-streaming Chat ═══════
+
+    H->>+HC: chat(request)
+    HC->>+HS: gRPC Chat(ChatRequest)
+    HS->>+LLM: ChatCompletion (non-streaming)
+    LLM-->>-HS: full response
+    HS-->>-HC: ChatResponse{content, tool_calls, usage}
+    HC-->>-H: return ChatResponse
+    H->>H: 解析响应, 执行工具
+
+    Note over H,LLM: ═══════ Memory Save ═══════
+
+    H->>+HC: memorySave(request)
+    HC->>+HS: gRPC HermesMemory.Save(SaveRequest)
+    HS->>HS: 生成嵌入向量 (调用嵌入模型)
+    HS->>HS: 存储到 Memory Provider<br/>(Holographic/Honcho 等)
+    HS-->>-HC: SaveResponse{memory_id, deduplicated}
+    HC-->>-H: return memory_id
+
+    Note over H,LLM: ═══════ Memory Search ═══════
+
+    H->>+HC: memorySearch(query)
+    HC->>+HS: gRPC HermesMemory.Search(SearchRequest)
+    HS->>HS: 生成查询嵌入向量
+    HS->>HS: 向量相似度搜索
+    HS-->>-HC: SearchResponse{results[], total_count, time_ms}
+    HC-->>-H: return MemoryItem[]
+
+    Note over H,LLM: ═══════ Skill Execution ═══════
+
+    H->>+HC: skillExecute(skillId, task, params)
+    HC->>+HS: gRPC HermesSkills.ExecuteSkill(ExecuteSkillRequest)
+    HS->>HS: 加载 SKILL.md 内容
+    HS->>HS: 填充模板变量 ${...}
+    HS->>HS: 调用 LLM 执行技能任务
+    HS-->>-HC: ExecuteSkillResponse{result, success, usage, time_ms}
+    HC-->>-H: return result
+
+    Note over H,LLM: ═══════ Agent Task (完整代理执行) ═══════
+
+    H->>+HC: agentRunTask(task, config)
+    HC->>+HS: gRPC HermesAgent.RunTask(TaskRequest)
+    HS->>HS: 启动 AIAgent 实例
+    HS->>HS: 初始化 Memory Manager
+    HS->>HS: 加载 Skills
+
+    loop Agent Loop 迭代
+        HS->>HS: assemblePrompt()
+        HS->>+LLM: stream ChatCompletion
+        LLM-->>-HS: response
+        HS->>HS: 解析响应
+        opt has tool_calls
+            HS->>HS: execute tool
+            HS->>HS: save to memory
+        end
+    end
+
+    HS-->>-HC: TaskResponse{result, iterations, usage, steps}
+    HC-->>-H: return final result
+
+    Note over H,LLM: ═══════ Error Handling ═══════
+
+    H->>+HC: chat(request)
+    HC->>+HS: gRPC Chat(request)
+    alt LLM API 临时错误 (503)
+        HS-->>HC: gRPC status UNAVAILABLE
+        Note over HC: 指数退避重试<br/>100ms → 200ms → 400ms
+        HC->>+HS: gRPC Chat(request) (重试)
+        HS->>+LLM: ChatCompletion
+        LLM-->>-HS: response
+        HS-->>-HC: ChatResponse
+        HC-->>-H: return response
+    else Rate Limit (429)
+        HS-->>HC: gRPC status RESOURCE_EXHAUSTED<br/>retry_after_ms: 5000
+        Note over HC: 等待 5 秒后重试
+        HC->>+HS: gRPC Chat(request) (等待后重试)
+    else 熔断器打开
+        Note over HC: Circuit Breaker OPEN<br/>快速失败, 不调用 gRPC
+        HC-->>-H: throw CircuitBreakerError
+        Note over H: 回退到直接 LLM Provider 调用
+    end
