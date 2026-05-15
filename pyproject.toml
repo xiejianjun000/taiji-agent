@@ -1,12 +1,12 @@
 [project]
-name = "opentaiji"
+name = "taiji_agent"
 version = "2.0.0"
-description = "OpenTaiji 2.0 - 融合Hermes Agent全部功能的AI智能体框架，基于太极哲学和WFGY防幻觉"
-authors = [{name = "OpenTaiji Team", email = "team@opentaiji.dev"}]
+description = "Taiji Agent 2.0 - 融合Hermes Agent全部功能的AI智能体框架，基于太极哲学和WFGY防幻觉"
+authors = [{name = "Taiji Agent Team", email = "team@taiji-agent.dev"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11"
-keywords = ["ai", "agent", "hermes", "harness", "wfgy", "hallucination", "llm"]
+keywords = ["ai", "agent", "hermes", "harness", "wfgy", "hallucination", "llm", "taiji"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -65,18 +65,18 @@ browser = [
     "selenium>=4.25.0,<5.0.0",
 ]
 all = [
-    "opentaiji[dev,messaging,voice,browser]",
+    "taiji_agent[dev,messaging,voice,browser]",
 ]
 
 [project.scripts]
-opentaiji = "opentaiji.cli:main"
-opentaiji-agent = "opentaiji.agent:main"
+taiji-agent = "taiji_agent.cli:main"
+taiji-agent-cli = "taiji_agent.agent:main"
 
 [project.urls]
-Homepage = "https://opentaiji.dev"
-Documentation = "https://opentaiji.dev/docs"
-Repository = "https://github.com/xiejianjun000/open-taiji"
-Issues = "https://github.com/xiejianjun000/open-taiji/issues"
+Homepage = "https://github.com/xiejianjun000/taiji-agent"
+Documentation = "https://github.com/xiejianjun000/taiji-agent"
+Repository = "https://github.com/xiejianjun000/taiji-agent"
+Issues = "https://github.com/xiejianjun000/taiji-agent/issues"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -106,7 +106,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["src/opentaiji"]
+source = ["src/taiji_agent"]
 branch = true
 omit = ["tests/*", "**/__pycache__/*"]
 

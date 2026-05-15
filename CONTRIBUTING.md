@@ -1,10 +1,10 @@
-# OpenTaiji Python Package
+# Taiji Agent Python Package
 
 ## 目录结构
 
 ```
-opentaiji-python/
-├── src/opentaiji/           # 源代码
+taiji-agent/
+├── src/taiji_agent/         # 源代码
 │   ├── agent/              # Agent 引擎
 │   ├── wfgy/               # WFGY 防幻觉
 │   ├── souls/              # Soul 人格
