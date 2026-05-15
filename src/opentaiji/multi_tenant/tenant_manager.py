@@ -239,10 +239,10 @@ class JsonTenantStore(TenantStore):
         return True
 
     def get_tenant(self, tenant_id: str) -> Optional[Tenant]:
-        """获取租户"""
+        """获取租户（过滤deleted状态）"""
         tenants = self._load_json(self.tenants_file)
         for t in tenants:
-            if t["tenant_id"] == tenant_id:
+            if t["tenant_id"] == tenant_id and t.get("status") != "deleted":
                 return self._dict_to_tenant(t)
         return None
 

@@ -138,9 +138,27 @@ class FailureModeDetector:
         anomalous = length < 20 or length > 10000
         return FailureDetection(self._modes["FM11"], anomalous, 0.7 if anomalous else 0.0, f"length={length}")
     def detect_repetition_excess(self, content: str) -> FailureDetection:
-        words = content.split()
+        # 支持中文和英文重复检测
+        import re
+        # 句子级别重复检测（按句号/逗号/换行分割）
+        sentences = re.split(r'[。！？\n]+', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if len(sentences) >= 4:
+            unique_sentences = set(sentences)
+            sentence_ratio = len(unique_sentences) / len(sentences)
+            if sentence_ratio < 0.5:  # 超过一半的句子重复
+                return FailureDetection(self._modes["FM12"], True, 1.0 - sentence_ratio, f"repeated_sentences={len(sentences) - len(unique_sentences)}")
+        
+        # 词语级别重复检测（支持中英文分词）
+        if ' ' in content:
+            words = content.split()
+        else:
+            # 中文字符级别重复检测（每2-4个字符作为词组）
+            words = [content[i:i+3] for i in range(0, min(len(content)-2, 30), 3)]
+        
         if len(words) < 10:
             return FailureDetection(self._modes["FM12"], False, 0.0)
+        
         ratio = len(set(words)) / len(words)
         return FailureDetection(self._modes["FM12"], ratio < 0.5, 1.0 - ratio, f"unique_ratio={ratio:.2f}")
     def detect_language_inconsistency(self, content: str) -> FailureDetection:

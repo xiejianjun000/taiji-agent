@@ -62,8 +62,8 @@ class PermissionGrant:
     role_id: str                       # 角色ID
     resource_type: ResourceType        # 资源类型
     permissions: Set[Permission]       # 权限集合
-    conditions: Dict[str, Any] = field(default_factory=dict)  # 条件限制
     granted_by: str                    # 授予者
+    conditions: Dict[str, Any] = field(default_factory=dict)  # 条件限制
     granted_at: datetime = field(default_factory=datetime.now)
     expires_at: Optional[datetime] = None  # 过期时间
 
@@ -122,12 +122,13 @@ class Role:
     @classmethod
     def system_role(cls, role_type: RoleType) -> Role:
         """创建系统预定义角色"""
-        role = cls.create(
+        role = cls(
+            role_id=f"role-{role_type.value}",  # 使用固定的role_id
             name=role_type.value.replace("_", " ").title(),
             role_type=role_type,
             description=f"System predefined {role_type.value} role",
+            is_system=True,
         )
-        role.is_system = True
         role._init_permissions()
         return role
 
@@ -519,6 +520,18 @@ class RBACManager:
     ) -> bool:
         """检查权限"""
         return self.permission_checker.check_permission(
+            user_id, resource_type, permission, scope
+        )
+
+    def require_permission(
+        self,
+        user_id: str,
+        resource_type: ResourceType,
+        permission: Permission,
+        scope: Optional[str] = None,
+    ) -> None:
+        """要求权限，失败则抛出异常"""
+        return self.permission_checker.require_permission(
             user_id, resource_type, permission, scope
         )
 

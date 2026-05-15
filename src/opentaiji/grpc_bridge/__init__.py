@@ -40,7 +40,7 @@ __version__ = "1.0.0"
 __author__ = "Taiji Agent Team"
 
 # 公开接口
-from grpc_bridge.server import (
+from opentaiji.grpc_bridge.server import (
     GrpcServerConfig,
     HermesProviderServicer,
     HermesMemoryServicer,
@@ -51,7 +51,7 @@ from grpc_bridge.server import (
     serve,
 )
 
-from grpc_bridge.client import (
+from opentaiji.grpc_bridge.client import (
     RetryConfig,
     TimeoutConfig,
     ConnectionPoolConfig,
@@ -64,7 +64,7 @@ from grpc_bridge.client import (
     HermesClientFactory,
 )
 
-from grpc_bridge.serialization import (
+from opentaiji.grpc_bridge.serialization import (
     Serializer,
     MessageConverter,
     ToolDefinitionConverter,
@@ -78,7 +78,7 @@ from grpc_bridge.serialization import (
     format_token_usage,
 )
 
-from grpc_bridge.health import (
+from opentaiji.grpc_bridge.health import (
     HealthStatus,
     ServiceState,
     HealthCheckResponse,

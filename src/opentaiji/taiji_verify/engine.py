@@ -209,7 +209,10 @@ class TaijiVerifyEngine:
                 request.input_text, delta_s=ds_result.delta_s,
             )
         
-        # Step 7: 综合判定
+        # Step 7: 编译目标为原子任务
+        compilation = self.compiler.compile(request.ground_truth, context=request.context)
+        
+        # Step 8: 综合判定
         verdict = self._make_verdict(ds_result, kg_result, stab_score, detections)
         
         return VerificationResponse(
@@ -224,6 +227,7 @@ class TaijiVerifyEngine:
                 confidence_adjusted=tuned.gate_factor < 0.7,
             ),
             failure_detections=detections,
+            compilation=compilation,
             final_vector=final_vec,
             processing_time_ms=int((time.time() - start) * 1000),
             metadata={'mode': 'full_pipeline'},
