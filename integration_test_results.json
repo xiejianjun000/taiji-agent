@@ -1,0 +1,169 @@
+{
+  "layer1_harness": {
+    "EventBus.publish_subscribe": {
+      "status": "PASS",
+      "message": ""
+    },
+    "EventBus.type_coverage": {
+      "status": "PASS",
+      "message": "Events: 4"
+    },
+    "Plugin.load": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Plugin.activate": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Sandbox.execute": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Streaming.send": {
+      "status": "PASS",
+      "message": "Chunks: 2"
+    },
+    "HITL.approval": {
+      "status": "PASS",
+      "message": ""
+    }
+  },
+  "layer2_hermes": {
+    "HermesProvider.context": {
+      "status": "PASS",
+      "message": ""
+    },
+    "HermesProvider.chat": {
+      "status": "PASS",
+      "message": ""
+    },
+    "HermesEngine.session": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Memory.add_get": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Memory.get_recent": {
+      "status": "PASS",
+      "message": "Count: 1"
+    },
+    "MultiTenant.register": {
+      "status": "PASS",
+      "message": ""
+    },
+    "MultiTenant.permission": {
+      "status": "PASS",
+      "message": ""
+    },
+    "SubAgents.get": {
+      "status": "PASS",
+      "message": ""
+    },
+    "SubAgents.list": {
+      "status": "PASS",
+      "message": "Count: 5"
+    }
+  },
+  "layer3_soul": {
+    "TaijiVerify.KunGuard": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.QianAdvance": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.FuReturn": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.GuanObserve": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.DeltaSCalculator": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.XunTune": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.PolarisCompiler": {
+      "status": "PASS",
+      "message": ""
+    },
+    "TaijiVerify.SymptomMap": {
+      "status": "PASS",
+      "message": ""
+    },
+    "GovMCPPlugin.load": {
+      "status": "PASS",
+      "message": ""
+    },
+    "DeltaS.compute": {
+      "status": "PASS",
+      "message": "ΔS: 0.2601"
+    },
+    "KunGuard.correct": {
+      "status": "PASS",
+      "message": ""
+    },
+    "SM4.encrypt_decrypt": {
+      "status": "PASS",
+      "message": ""
+    },
+    "SM3.hash": {
+      "status": "PASS",
+      "message": ""
+    },
+    "ApprovalWorkflow.create": {
+      "status": "PASS",
+      "message": ""
+    },
+    "GovTools.mask_phone": {
+      "status": "PASS",
+      "message": ""
+    }
+  },
+  "cross_layer": {
+    "Provider→Engine": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Engine→Verify": {
+      "status": "PASS",
+      "message": ""
+    },
+    "EventBus→Plugin": {
+      "status": "PASS",
+      "message": "Events: 2"
+    },
+    "Provider→EventBus": {
+      "status": "PASS",
+      "message": "Events: 0"
+    },
+    "Memory.data_flow": {
+      "status": "PASS",
+      "message": "Memories: 2"
+    },
+    "Session.flow": {
+      "status": "PASS",
+      "message": ""
+    },
+    "Audit.data_flow": {
+      "status": "PASS",
+      "message": "Records: 5"
+    }
+  },
+  "total": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 0
+  },
+  "elapsed_seconds": 0.6463789939880371,
+  "timestamp": "2026-05-15T05:50:01.172208"
+}
