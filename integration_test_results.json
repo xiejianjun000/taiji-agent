@@ -106,7 +106,7 @@
     },
     "DeltaS.compute": {
       "status": "PASS",
-      "message": "ΔS: 0.2601"
+      "message": "ΔS: 0.2528"
     },
     "KunGuard.correct": {
       "status": "PASS",
@@ -164,6 +164,6 @@
     "failed": 0,
     "skipped": 0
   },
-  "elapsed_seconds": 0.6463789939880371,
-  "timestamp": "2026-05-15T05:50:01.172208"
+  "elapsed_seconds": 0.6338436603546143,
+  "timestamp": "2026-05-15T21:05:56.151648"
 }

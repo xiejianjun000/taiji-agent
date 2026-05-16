@@ -40,9 +40,12 @@ from .tools import (
     GovTools,
 )
 from .plugins import GovMCPPlugin
+from .server import GovMCPServer
 
 
 __all__ = [
+    "GovMCPServer",
+    "GovMCPPlugin",
     "CipherMode",
     "HashAlgorithm",
     "KeyPair",

@@ -1,22 +1,29 @@
 """
-WFGY 模块初始化
+Taiji Verify 模块初始化
+
+太极验证系统 - 核心防幻觉组件
 """
 
 from taiji_agent.wfgy.verifier import (
     HallucinationDetector,
     SelfConsistencyChecker,
     SourceTracer,
-    WFGYKnowledgeEntry,
-    WFGYRule,
-    WFGYVerificationResult,
-    WFGYVerifier,
+    TaijiVerifyKnowledgeEntry,
+    TaijiVerifyRule,
+    TaijiVerifyResult,
+    TaijiVerifier,
 )
 
+WFGYVerifier = TaijiVerifier
+WFGYRule = TaijiVerifyRule
+WFGYKnowledgeEntry = TaijiVerifyKnowledgeEntry
+WFGYVerificationResult = TaijiVerifyResult
+
 __all__ = [
-    "WFGYVerifier",
-    "WFGYRule",
-    "WFGYKnowledgeEntry",
-    "WFGYVerificationResult",
+    "TaijiVerifier",
+    "TaijiVerifyRule",
+    "TaijiVerifyKnowledgeEntry",
+    "TaijiVerifyResult",
     "HallucinationDetector",
     "SelfConsistencyChecker",
     "SourceTracer",

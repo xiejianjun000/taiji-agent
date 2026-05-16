@@ -1,6 +1,6 @@
 # Taiji Agent 2.0
 
-**融合 Hermes Agent + cgast/harness + Taiji Verify WFGY**
+**融合 Hermes Agent + cgast/harness + Taiji Verify**
 太极哲学驱动的 AI Agent 框架
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
@@ -48,25 +48,25 @@ Taiji Agent 的核心只有一件事：**管理 Agent 的生命周期**。所有
 
 > 一阴一阳之谓道
 
-### ☀️ 阳：确定性 — WFGY 防幻觉系统
+### ☀️ 阳：确定性 — Taiji Verify 防幻觉系统
 
 **阳是规则，是秩序，是可验证的确定性**。
 
-WFGY (Witness & Fact Grounded Verifier) 符号层防幻觉系统，是 Taiji Agent 的确定性基石，也是项目中**最核心的差异化能力**。
+Taiji Verify 符号层防幻觉系统，是 Taiji Agent 的确定性基石，也是项目中**最核心的差异化能力**。
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│                      WFGY 防幻觉五重验证                            │
+│                      Taiji Verify 防幻觉五重验证                    │
 ├────────────────┬───────────────────┬──────────────┬───────────────┤
-│  WFGYVerifier  │ SelfConsistency   │ SourceTracer │ Hallucination │
+│  TaijiVerifier │ SelfConsistency   │ SourceTracer │ Hallucination │
 │  符号层规则验证  │ 多路径自一致性检查  │ 知识溯源索引  │ 幻觉风险检测器  │
 └────────────────┴───────────────────┴──────────────┴───────────────┘
 ```
 
-- **符号层规则验证 (WFGYVerifier)**：基于知识库的事实匹配，支持正则表达式匹配，输出必须在知识边界内。
+- **符号层规则验证 (TaijiVerifier)**：基于知识库的事实匹配，支持正则表达式匹配，输出必须在知识边界内。
 - **多路径自一致性 (SelfConsistencyChecker)**：对同一问题采样多次，投票选出一致结果。
 - **知识溯源索引 (SourceTracer)**：每个结论都能追溯到原始知识来源，可审计。
-- **幻觉风险检测 (HallucinationDetector)**：综合评分 = WFGY(40%) + 自一致性(30%) + 知识溯源(30%)。
+- **幻觉风险检测 (HallucinationDetector)**：综合评分 = TaijiVerify(40%) + 自一致性(30%) + 知识溯源(30%)。
 
 ### 🌙 阴：随机性 — LLM 创造力引擎
 
@@ -168,7 +168,7 @@ context = honcho.get_user_context_prompt()
 ```python
 from taiji-agent import SelfImprovingLoop
 
-loop = SelfImprovingLoop(honcho, skill_manager, wfgy)
+loop = SelfImprovingLoop(honcho, skill_manager, verifier)
 learnings = await loop.learn_from_interaction(conversation, task, result, tools)
 ```
 
@@ -280,14 +280,14 @@ result = await coordinator.execute_hierarchical(task)
 │  │                      太极引擎核心 (Python)                           │   │
 │  │                                                                    │   │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐              │   │
-│  │  │     WFGY     │ │     Soul     │ │    Honcho    │              │   │
+│  │  │  Taiji Verify │ │     Soul     │ │    Honcho    │              │   │
 │  │  │   防幻觉      │ │   人格引擎    │ │   记忆系统    │              │   │
 │  │  │ (OpenTaiji) │ │  (Harness)   │ │  (Hermes)    │              │   │
 │  │  └──────────────┘ └──────────────┘ └──────────────┘              │   │
 │  │                                                                    │   │
 │  │  ┌──────────────────────────────────────────────────────────────┐  │   │
 │  │  │           Agent Loop (Harness ~350行)                        │  │   │
-│  │  │      prompt → WFGY验证 → LLM → execute                      │  │   │
+│  │  │      prompt → Taiji Verify验证 → LLM → execute              │  │   │
 │  │  └──────────────────────────────────────────────────────────────┘  │   │
 │  │                                                                    │   │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐              │   │
@@ -328,7 +328,7 @@ result = await coordinator.execute_hierarchical(task)
 | 模块 | 来源 | 代码行数 | 功能 |
 |------|------|---------|------|
 | agent/ | cgast/harness | ~350 | Agent Loop 核心 |
-| wfgy/ | OpenTaiji | ~400 | WFGY 防幻觉 |
+| wfgy/ | OpenTaiji | ~400 | Taiji Verify 防幻觉 |
 | souls/ | cgast/harness | ~200 | Soul 人格引擎 |
 | memory/ | Hermes | ~150 | 会话记忆 |
 | learning/ | Hermes | ~300 | 自我学习闭环 |
@@ -362,12 +362,12 @@ pip install -e ".[all]"
 taiji-agent init
 ```
 
-### WFGY 防幻觉验证
+### Taiji Verify 防幻觉验证
 
 ```python
-from taiji-agent import WFGYVerifier, HallucinationDetector
+from taiji-agent import TaijiVerifier, HallucinationDetector
 
-verifier = WFGYVerifier()
+verifier = TaijiVerifier()
 detector = HallucinationDetector()
 
 # 验证内容
@@ -472,7 +472,7 @@ python tests/stress_test.py
 | 模块 | 操作 | 性能 |
 |------|------|------|
 | Soul 加载 | 1,000次 | 595,860 ops/s |
-| WFGY 验证 | 10,000次 | 398,195 ops/s |
+| Taiji Verify 验证 | 10,000次 | 398,195 ops/s |
 | 工具执行 | 100次 | 100,358 ops/s |
 | 幻觉检测 | 25,000次 | 102,314 ops/s |
 | 并发验证 | 1,000任务 | 234,536 ops/s |
@@ -490,9 +490,9 @@ from taiji-agent import (
     AgentConfig,    # 配置类
 )
 
-# WFGY 防幻觉
+# Taiji Verify 防幻觉
 from taiji-agent import (
-    WFGYVerifier,           # 符号层验证器
+    TaijiVerifier,           # 符号层验证器
     HallucinationDetector,  # 幻觉检测器
 )
 
@@ -635,7 +635,7 @@ from taiji-agent import (
 ## 🗺️ 路线图
 
 ### v2.0.0（已完成 ✅）
-- [x] WFGY 防幻觉系统
+- [x] Taiji Verify 防幻觉系统
 - [x] Soul 人格引擎
 - [x] Honcho 记忆系统
 - [x] 国产模型支持（通义千问/智谱/Kimi/豆包）

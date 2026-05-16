@@ -1,5 +1,5 @@
 """
-OpenTaiji Agent Engine - 融合 Hermes Agent + Harness + WFGY
+Taiji Agent Engine - 融合 Hermes Agent + Harness + Taiji Verify
 核心 Agent Loop 实现
 """
 
@@ -16,7 +16,7 @@ from taiji_agent.memory.session import SessionMemory
 from taiji_agent.providers.base import LLMProvider
 from taiji_agent.souls.loader import SoulLoader, inject_soul
 from taiji_agent.tools.registry import ToolRegistry
-from taiji_agent.wfgy.verifier import HallucinationDetector, SelfConsistencyChecker, WFGYVerifier
+from taiji_agent.wfgy.verifier import HallucinationDetector, SelfConsistencyChecker, TaijiVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,8 @@ class AgentConfig:
     temperature: float = 0.7
     max_tokens: int = 4096
     max_iterations: int = 25
-    wfgy_enabled: bool = True
-    wfgy_threshold: float = 0.7
+    taiji_verify_enabled: bool = True
+    taiji_verify_threshold: float = 0.7
     self_consistency_samples: int = 3
     stream: bool = True
     workdir: str = "."
@@ -73,7 +73,7 @@ class TaskResult:
     error: str | None = None
     iterations: int = 0
     tools_used: list[str] = field(default_factory=list)
-    wfgy_blocked: int = 0
+    verify_blocked: int = 0
     hallucination_risk: float = 0.0
 
 
@@ -83,7 +83,7 @@ class TaijiAgent:
 
     特性:
     - Agent Loop 基于 cgast/harness (~350行核心)
-    - WFGY 防幻觉来自 OpenTaiji
+    - Taiji Verify 防幻觉验证
     - 工具系统来自 Hermes Agent
     - Soul 人格系统来自 Harness
     - 记忆系统来自 Hermes Honcho
@@ -98,19 +98,16 @@ class TaijiAgent:
         self.provider = provider
         self.event_bus = EventBus()
 
-        # 核心组件初始化
         self.soul_loader = SoulLoader()
-        self.wfgy = WFGYVerifier()
+        self.taiji_verifier = TaijiVerifier()
         self.hallucination_detector = HallucinationDetector()
         self.consistency_checker = SelfConsistencyChecker()
         self.memory = SessionMemory()
         self.tools = ToolRegistry()
 
-        # 状态
         self.messages: list[Message] = []
         self.iteration_count = 0
 
-        # 初始化提供商
         if self.provider is None:
             self._init_provider()
 
@@ -161,21 +158,19 @@ class TaijiAgent:
 
         流程:
         1. Assemble prompt (soul + skills + history)
-        2. WFGY 预处理验证
+        2. Taiji Verify 预处理验证
         3. LLM 请求
         4. 解析响应
-        5. WFGY 后处理验证
+        5. Taiji Verify 后处理验证
         6. 工具执行
         7. 状态更新
         8. 重复直到完成
         """
         self.event_bus.emit_sync("agent:start", {"task": task})
 
-        # 初始化消息
         self.messages = []
         self.iteration_count = 0
 
-        # 系统提示
         system_prompt = self._build_system_prompt()
         if system_message:
             system_prompt += f"\n\n{system_message}"
@@ -183,14 +178,11 @@ class TaijiAgent:
         self.messages.append(Message(role="system", content=system_prompt))
         self.messages.append(Message(role="user", content=task))
 
-        # Agent Loop
         while self.iteration_count < self.config.max_iterations:
             try:
-                # 1. Assemble prompt
                 self.event_bus.emit_sync("prompt:assemble", {"iteration": self.iteration_count})
                 self._assemble_prompt()
 
-                # 2. Emit loop start event
                 self.event_bus.emit_sync(
                     "loop:start",
                     {
@@ -199,7 +191,6 @@ class TaijiAgent:
                     },
                 )
 
-                # 3. LLM 请求
                 self.event_bus.emit_sync("llm:request", {"iteration": self.iteration_count})
 
                 provider = self.provider
@@ -221,13 +212,10 @@ class TaijiAgent:
                     },
                 )
 
-                # 4. WFGY 防幻觉验证 (后处理)
-                if self.config.wfgy_enabled and response.content:
+                if self.config.taiji_verify_enabled and response.content:
                     response = await self._verify_and_annotate(response)
 
-                # 5. 解析响应
                 if response.tool_calls:
-                    # 工具调用
                     for tool_call in response.tool_calls:
                         self.event_bus.emit_sync(
                             "tool:request",
@@ -237,7 +225,6 @@ class TaijiAgent:
                             },
                         )
 
-                        # 执行工具
                         result = await self.tools.execute(tool_call)
 
                         self.messages.append(
@@ -265,7 +252,6 @@ class TaijiAgent:
 
                     self.iteration_count += 1
                 else:
-                    # 最终响应
                     self.messages.append(
                         Message(
                             role="assistant",
@@ -273,7 +259,6 @@ class TaijiAgent:
                         )
                     )
 
-                    # 保存到记忆
                     await self.memory.save_session([msg.model_dump() for msg in self.messages])
 
                     self.event_bus.emit_sync(
@@ -302,7 +287,6 @@ class TaijiAgent:
                         iterations=self.iteration_count,
                     )
 
-        # 达到最大迭代次数
         self.event_bus.emit_sync(
             "agent:end",
             {
@@ -350,10 +334,9 @@ class TaijiAgent:
                         response_text += chunk
                         yield chunk
 
-                # 处理完整响应
-                if self.config.wfgy_enabled and response_text:
+                if self.config.taiji_verify_enabled and response_text:
                     risk = self.hallucination_detector.detect(response_text)
-                    if risk > (1 - self.config.wfgy_threshold):
+                    if risk > (1 - self.config.taiji_verify_threshold):
                         yield f"\n\n[⚠️ 幻觉风险 {risk:.1%}]"
 
                 self.iteration_count += 1
@@ -365,15 +348,15 @@ class TaijiAgent:
                 break
 
     def _build_system_prompt(self) -> str:
-        """构建系统提示 - 融合 Soul + WFGY + 太极哲学"""
+        """构建系统提示 - 融合 Soul + Taiji Verify + 太极哲学"""
         soul = self.soul_loader.load(self.config.soul)
 
         prompt_parts = [
-            "# 太极 Agent (OpenTaiji 2.0)",
+            "# 太极 Agent (Taiji Agent 2.0)",
             "",
             inject_soul(soul),
             "",
-            "## WFGY 防幻觉指南",
+            "## Taiji Verify 防幻觉指南",
             "- 所有陈述必须有事实依据",
             "- 不确定时明确标注 [不确定]",
             "- 引用来源时必须准确",
@@ -392,20 +375,17 @@ class TaijiAgent:
         return [msg.model_dump() for msg in self.messages]
 
     async def _verify_and_annotate(self, response) -> Any:
-        """WFGY 验证并注解"""
+        """Taiji Verify 验证并注解"""
         if not response.content:
             return response
 
-        # 1. 符号层验证
-        wfgy_passed = self.wfgy.verify(response.content)
+        verify_passed = self.taiji_verifier.verify(response.content)
 
-        # 2. 幻觉检测
         risk = self.hallucination_detector.detect(response.content)
 
-        # 3. 如果风险高，添加警告
-        if risk > (1 - self.config.wfgy_threshold):
-            status = "通过" if wfgy_passed else "未通过"
-            warning = f"\n\n[⚠️ 幻觉风险 {risk:.1%}，WFGY 验证{status}]"
+        if risk > (1 - self.config.taiji_verify_threshold):
+            status = "通过" if verify_passed else "未通过"
+            warning = f"\n\n[⚠️ 幻觉风险 {risk:.1%}，Taiji Verify 验证{status}]"
             response.content += warning
 
         return response

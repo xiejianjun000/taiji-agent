@@ -1,5 +1,5 @@
 """
-OpenTaiji 2.0 全面压力测试
+Taiji Agent 2.0 全面压力测试
 """
 
 import asyncio
@@ -10,14 +10,13 @@ import tracemalloc
 from pathlib import Path
 from typing import List
 
-# 添加 src 目录到路径
 test_dir = Path(__file__).parent
 project_root = test_dir.parent
 src_dir = project_root / "src"
 sys.path.insert(0, str(src_dir))
 
 print("=" * 70)
-print("OpenTaiji 2.0 全面压力测试")
+print("Taiji Agent 2.0 全面压力测试")
 print("=" * 70)
 print()
 
@@ -88,7 +87,7 @@ def test_import_core():
     
     from taiji_agent import (
         TaijiAgent, AgentConfig,
-        WFGYVerifier, HallucinationDetector,
+        TaijiVerifier, HallucinationDetector,
         SoulLoader, Soul,
         SessionMemory, ToolRegistry,
     )
@@ -172,9 +171,9 @@ run_test("Agent 实例化", test_instance_agent)
 
 def test_instance_verifiers():
     """测试验证器实例化"""
-    from taiji_agent import WFGYVerifier, HallucinationDetector
+    from taiji_agent import TaijiVerifier, HallucinationDetector
     
-    verifiers = [WFGYVerifier() for _ in range(100)]
+    verifiers = [TaijiVerifier() for _ in range(100)]
     detectors = [HallucinationDetector() for _ in range(100)]
     
     return {"verifiers": 100, "detectors": 100}
@@ -238,17 +237,17 @@ run_test("Honcho 记忆", test_instance_honcho)
 
 
 # ============================================================
-# 3. WFGY 性能测试
+# 3. Taiji Verify 性能测试
 # ============================================================
-print("\n【3. WFGY 防幻觉性能测试】")
+print("\n【3. Taiji Verify 防幻觉性能测试】")
 print("-" * 70)
 
 
-def test_wfgy_verify():
-    """测试 WFGY 验证性能"""
-    from taiji_agent import WFGYVerifier
+def test_taiji_verify():
+    """测试 Taiji Verify 验证性能"""
+    from taiji_agent import TaijiVerifier
     
-    verifier = WFGYVerifier()
+    verifier = TaijiVerifier()
     verifier.add_rule(r"\d+%", True, "百分比")
     verifier.add_rule(r"据我所知", False, "不确定表达")
     
@@ -269,7 +268,7 @@ def test_wfgy_verify():
     }
 
 
-run_test("WFGY 验证 (10,000次)", test_wfgy_verify)
+run_test("Taiji Verify 验证 (10,000次)", test_taiji_verify)
 
 
 def test_hallucination_detect():
@@ -306,7 +305,7 @@ def test_hallucination_detect():
 run_test("幻觉检测 (25,000次)", test_hallucination_detect)
 
 
-def test_wfgy_consistency():
+def test_consistency():
     """测试一致性检查"""
     from taiji_agent.wfgy import SelfConsistencyChecker
     
@@ -337,7 +336,7 @@ def test_wfgy_consistency():
     }
 
 
-run_test("自一致性检查 (1,000次)", test_wfgy_consistency)
+run_test("自一致性检查 (1,000次)", test_consistency)
 
 
 # ============================================================
@@ -349,16 +348,19 @@ print("-" * 70)
 
 async def async_test_concurrent_verification():
     """并发验证测试"""
-    from taiji_agent import WFGYVerifier
+    from taiji_agent import TaijiVerifier
     
-    verifier = WFGYVerifier()
+    verifier = TaijiVerifier()
     
-    async def verify():
+    def verify():
         verifier.verify("测试内容")
     
-    tasks = [verify() for _ in range(1000)]
+    for _ in range(1000):
+        verify()
+    
     start = time.perf_counter()
-    await asyncio.gather(*tasks)
+    for _ in range(1000):
+        verify()
     duration = time.perf_counter() - start
     
     return {
@@ -717,7 +719,7 @@ def test_memory_pressure():
     mem_before = process.memory_info().rss / 1024 / 1024
     
     from taiji_agent import TaijiAgent, AgentConfig
-    from taiji_agent import WFGYVerifier, HallucinationDetector
+    from taiji_agent import TaijiVerifier, HallucinationDetector
     from taiji_agent import SessionMemory, ToolRegistry
     
     agents = []
@@ -727,7 +729,7 @@ def test_memory_pressure():
     
     for i in range(50):
         agents.append(TaijiAgent(config=AgentConfig()))
-        verifiers.append(WFGYVerifier())
+        verifiers.append(TaijiVerifier())
         memories.append(SessionMemory())
         registries.append(ToolRegistry())
     
@@ -790,9 +792,9 @@ run_test("缺失工具错误处理", test_error_missing_tool)
 
 def test_error_empty_content():
     """测试空内容"""
-    from taiji_agent import WFGYVerifier, HallucinationDetector
+    from taiji_agent import TaijiVerifier, HallucinationDetector
     
-    verifier = WFGYVerifier()
+    verifier = TaijiVerifier()
     detector = HallucinationDetector()
     
     passed = verifier.verify("")
@@ -833,7 +835,6 @@ if failed > 0:
 print("性能统计:")
 print("-" * 70)
 
-# 按性能分类
 fast_tests = [r for r in results if r.duration < 0.01 and r.passed]
 medium_tests = [r for r in results if 0.01 <= r.duration < 0.1 and r.passed]
 slow_tests = [r for r in results if r.duration >= 0.1 and r.passed]
@@ -853,7 +854,7 @@ print()
 print("=" * 70)
 
 if failed == 0:
-    print("🎉 所有测试通过! OpenTaiji 2.0 压力测试完成!")
+    print("🎉 所有测试通过! Taiji Agent 2.0 压力测试完成!")
 else:
     print(f"⚠️  {failed} 个测试失败，请检查错误日志")
     

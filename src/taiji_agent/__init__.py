@@ -1,7 +1,7 @@
 """
 Taiji Agent Python Package
 
-融合 Hermes Agent + cgast/harness + Taiji Verify WFGY + Dify + LangGraph + OpenAI Agents SDK
+融合 Hermes Agent + cgast/harness + Taiji Verify + Dify + LangGraph + OpenAI Agents SDK
 太极哲学驱动的 AI Agent 框架 v2.0
 
 新增功能:
@@ -109,7 +109,7 @@ from taiji_agent.visual import (
     MermaidExporter,
     WorkflowExporter,
 )
-from taiji_agent.wfgy import HallucinationDetector, WFGYVerifier
+from taiji_agent.wfgy import HallucinationDetector, TaijiVerifier
 from taiji_agent.taiji_verify import (
     DeltaSCalculator,
     DeltaSResult,
@@ -161,8 +161,8 @@ __all__ = [
     # Core
     "TaijiAgent",
     "AgentConfig",
-    # WFGY
-    "WFGYVerifier",
+    # Taiji Verify - 防幻觉验证
+    "TaijiVerifier",
     "HallucinationDetector",
     # Taiji Verify - 阴阳距
     "DeltaSCalculator",

@@ -1,5 +1,5 @@
 """
-OpenTaiji CLI - 命令行界面
+Taiji Agent CLI - 命令行界面
 """
 
 import asyncio
@@ -15,7 +15,7 @@ from taiji_agent.agent.engine import AgentConfig, TaijiAgent
 from taiji_agent.memory import SessionMemory
 from taiji_agent.souls import SoulLoader
 from taiji_agent.tools import registry
-from taiji_agent.wfgy import HallucinationDetector, WFGYVerifier
+from taiji_agent.wfgy import HallucinationDetector, TaijiVerifier
 
 console = Console()
 
@@ -24,12 +24,11 @@ def load_config() -> AgentConfig:
     """加载配置"""
     config = AgentConfig()
 
-    # 从环境变量或配置文件加载
     config.api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")
-    config.provider = os.getenv("OPENAIJI_PROVIDER", "anthropic")
-    config.model = os.getenv("OPENAIJI_MODEL", "claude-sonnet-4-20250514")
-    config.workdir = os.getenv("OPENAIJI_WORKDIR", ".")
-    config.wfgy_enabled = os.getenv("OPENAIJI_WFGY", "true").lower() == "true"
+    config.provider = os.getenv("TAIJI_PROVIDER", "anthropic")
+    config.model = os.getenv("TAIJI_MODEL", "claude-sonnet-4-20250514")
+    config.workdir = os.getenv("TAIJI_WORKDIR", ".")
+    config.taiji_verify_enabled = os.getenv("TAIJI_VERIFY", "true").lower() == "true"
 
     return config
 
@@ -60,7 +59,7 @@ async def run_agent(task: str, config: AgentConfig, stream: bool = False):
 @click.group()
 @click.version_option(version="2.0.0")
 def cli():
-    """OpenTaiji 2.0 - 融合 Hermes Agent + Harness + WFGY"""
+    """Taiji Agent 2.0 - 融合 Hermes Agent + Harness + Taiji Verify"""
     pass
 
 
@@ -70,9 +69,9 @@ def cli():
 @click.option("--model", "-m", default="claude-sonnet-4-20250514", help="Model name")
 @click.option("--api-key", "-k", default=None, help="API Key")
 @click.option("--soul", "-s", default="default", help="Soul to use")
-@click.option("--no-wfgy", is_flag=True, help="Disable WFGY")
+@click.option("--no-verify", is_flag=True, help="Disable Taiji Verify")
 @click.option("--stream/--no-stream", default=True, help="Stream response")
-def run(task: str | None, provider: str, model: str, api_key: str | None, soul: str, no_wfgy: bool, stream: bool):
+def run(task: str | None, provider: str, model: str, api_key: str | None, soul: str, no_verify: bool, stream: bool):
     """运行 Agent"""
     if not task:
         console.print("[yellow]请提供任务描述[/yellow]")
@@ -83,7 +82,7 @@ def run(task: str | None, provider: str, model: str, api_key: str | None, soul: 
         model=model,
         api_key=api_key,
         soul=soul,
-        wfgy_enabled=not no_wfgy,
+        taiji_verify_enabled=not no_verify,
         stream=stream,
     )
 
@@ -92,24 +91,22 @@ def run(task: str | None, provider: str, model: str, api_key: str | None, soul: 
 
 @cli.command()
 def init():
-    """初始化 OpenTaiji"""
-    home = Path.home() / ".opentaiji"
+    """初始化 Taiji Agent"""
+    home = Path.home() / ".taiji"
     home.mkdir(parents=True, exist_ok=True)
 
-    # 创建目录结构
     (home / "souls").mkdir(exist_ok=True)
     (home / "memory").mkdir(exist_ok=True)
     (home / "skills").mkdir(exist_ok=True)
     (home / "logs").mkdir(exist_ok=True)
 
-    # 创建示例配置
     config_file = home / "config.yaml"
     if not config_file.exists():
-        config_file.write_text("""# OpenTaiji 配置
+        config_file.write_text("""# Taiji Agent 配置
 provider: anthropic
 model: claude-sonnet-4-20250514
 soul: default
-wfgy_enabled: true
+taiji_verify_enabled: true
 max_iterations: 25
 """)
 
@@ -153,15 +150,15 @@ def memory():
 
 @cli.command()
 @click.option("--text", "-t", required=True, help="要检测的文本")
-def wfgy_check(text: str):
-    """WFGY 验证文本"""
-    verifier = WFGYVerifier()
+def verify(text: str):
+    """Taiji Verify 验证文本"""
+    verifier = TaijiVerifier()
     detector = HallucinationDetector()
 
     passed = verifier.verify(text)
     risk = detector.detect(text)
 
-    console.print("[bold]WFGY 验证结果:[/bold]")
+    console.print("[bold]Taiji Verify 验证结果:[/bold]")
     console.print(f"  通过: {'✓' if passed else '✗'}")
     console.print(f"  幻觉风险: {risk:.1%}")
 

@@ -1,7 +1,7 @@
 """
 自我学习闭环 - Honcho 用户建模
 来自 Hermes Agent
-融合 OpenTaiji WFGY
+融合 Taiji Verify 防幻觉验证
 """
 
 import json
@@ -286,18 +286,18 @@ class SelfImprovingLoop:
     """
     自我学习闭环
 
-    融合 Hermes Honcho + Skills + OpenTaiji WFGY
+    融合 Hermes Honcho + Skills + Taiji Verify
     """
 
     def __init__(
         self,
         honcho: HonchoMemory,
-        skill_manager,  # SkillManager
-        wfgy_verifier,  # WFGYVerifier
+        skill_manager,
+        verifier,
     ):
         self.honcho = honcho
         self.skill_manager = skill_manager
-        self.wfgy = wfgy_verifier
+        self.verifier = verifier
 
         self._learning_hooks: list[Callable] = []
 

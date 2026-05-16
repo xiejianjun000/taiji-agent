@@ -1,6 +1,8 @@
 """
-WFGY 防幻觉系统 - OpenTaiji 核心组件
+Taiji Verify 太极验证系统 - 核心防幻觉组件
+
 从 TypeScript 移植到 Python
+提供符号层验证、幻觉检测、自一致性检查和知识溯源功能
 """
 
 import re
@@ -9,7 +11,7 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 
 
-class WFGYRule(BaseModel):
+class TaijiVerifyRule(BaseModel):
     id: str
     name: str
     description: str
@@ -19,7 +21,7 @@ class WFGYRule(BaseModel):
     violation_message: str | None = None
 
 
-class WFGYKnowledgeEntry(BaseModel):
+class TaijiVerifyKnowledgeEntry(BaseModel):
     symbol: str
     meaning: str
     allowed_contexts: list[str] = []
@@ -28,7 +30,7 @@ class WFGYKnowledgeEntry(BaseModel):
 
 
 @dataclass
-class WFGYVerificationResult:
+class TaijiVerifyResult:
     passed: bool
     score: float
     violations: list[str]
@@ -36,9 +38,9 @@ class WFGYVerificationResult:
     confidence: float
 
 
-class WFGYVerifier:
+class TaijiVerifier:
     """
-    WFGY (Witness & Fact Grounded Verifier) 符号层防幻觉验证器
+    Taiji Verify 太极验证器 - 符号层防幻觉验证
 
     基于知识库和符号规则对 LLM 输出进行验证，确保：
     1. 输出符合符号规范
@@ -48,12 +50,12 @@ class WFGYVerifier:
 
     def __init__(
         self,
-        rules: list[WFGYRule] | None = None,
-        knowledge_base: list[WFGYKnowledgeEntry] | None = None,
+        rules: list[TaijiVerifyRule] | None = None,
+        knowledge_base: list[TaijiVerifyKnowledgeEntry] | None = None,
         minimum_score: float = 0.7,
     ):
         self.rules = rules or []
-        self.knowledge_base: dict[str, WFGYKnowledgeEntry] = {entry.symbol: entry for entry in (knowledge_base or [])}
+        self.knowledge_base: dict[str, TaijiVerifyKnowledgeEntry] = {entry.symbol: entry for entry in (knowledge_base or [])}
         self.minimum_score = minimum_score
         self._compile_rules()
 
@@ -75,7 +77,7 @@ class WFGYVerifier:
         weight: float = 1.0,
     ):
         """添加验证规则"""
-        rule = WFGYRule(
+        rule = TaijiVerifyRule(
             id=f"rule_{len(self.rules) + 1}",
             name=name or f"Rule {len(self.rules) + 1}",
             description="",
@@ -92,7 +94,7 @@ class WFGYVerifier:
 
     def add_knowledge(self, symbol: str, meaning: str, source: str = ""):
         """添加知识条目"""
-        entry = WFGYKnowledgeEntry(
+        entry = TaijiVerifyKnowledgeEntry(
             symbol=symbol,
             meaning=meaning,
             source=source,
@@ -104,18 +106,17 @@ class WFGYVerifier:
         result = self._verify(content)
         return result.passed
 
-    def verify_detailed(self, content: str) -> WFGYVerificationResult:
+    def verify_detailed(self, content: str) -> TaijiVerifyResult:
         """详细验证"""
         return self._verify(content)
 
-    def _verify(self, content: str) -> WFGYVerificationResult:
+    def _verify(self, content: str) -> TaijiVerifyResult:
         """内部验证逻辑"""
         violations = []
         matched_rules = []
         total_weight = 0.0
         violation_weight = 0.0
 
-        # 规则检查
         for compiled, rule in self._compiled_rules:
             matches = compiled.search(content)
             total_weight += rule.weight
@@ -127,17 +128,14 @@ class WFGYVerifier:
             elif matches and rule.expected:
                 matched_rules.append(rule.id)
 
-        # 知识库检查
         for symbol, entry in self.knowledge_base.items():
             if symbol in content:
-                # 检查上下文
                 for forbidden in entry.forbidden_contexts:
                     if forbidden in content:
                         violations.append(f"Symbol '{symbol}' used in forbidden context: {forbidden}")
                         total_weight += 0.5
                         violation_weight += 0.5
 
-        # 计算分数
         if total_weight > 0:
             score = 1.0 - (violation_weight / total_weight)
         else:
@@ -145,7 +143,7 @@ class WFGYVerifier:
 
         passed = score >= self.minimum_score and len(violations) == 0
 
-        return WFGYVerificationResult(
+        return TaijiVerifyResult(
             passed=passed,
             score=score,
             violations=violations,
@@ -158,11 +156,11 @@ class HallucinationDetector:
     """
     幻觉检测器
 
-    综合评分 = WFGY(40%) + 自一致性(30%) + 知识溯源(30%)
+    综合评分 = Taiji Verify(40%) + 自一致性(30%) + 知识溯源(30%)
     """
 
     def __init__(self):
-        self.wfgy_weight = 0.4
+        self.verify_weight = 0.4
         self.consistency_weight = 0.3
         self.grounding_weight = 0.3
 
@@ -173,7 +171,6 @@ class HallucinationDetector:
         """
         risk_factors = []
 
-        # 1. 检测模糊引用
         uncertain_patterns = [
             r"据我所知",
             r"一般来说",
@@ -185,7 +182,6 @@ class HallucinationDetector:
         uncertain_count = sum(len(re.findall(p, content)) for p in uncertain_patterns)
         risk_factors.append(min(uncertain_count * 0.1, 0.5))
 
-        # 2. 检测绝对陈述
         absolute_patterns = [
             r"绝对",
             r"一定",
@@ -197,20 +193,16 @@ class HallucinationDetector:
         absolute_count = sum(len(re.findall(p, content)) for p in absolute_patterns)
         risk_factors.append(min(absolute_count * 0.15, 0.6))
 
-        # 3. 检测数字准确性风险
         number_pattern = r"\d+"
         numbers = re.findall(number_pattern, content)
         if numbers:
-            # 检查是否有大数字（可能不准确）
             large_numbers = [n for n in numbers if len(n) >= 4]
             risk_factors.append(len(large_numbers) * 0.1)
 
-        # 4. 检测来源标注
         has_citation = bool(re.search(r"\[来源|\[\d+\]|\(\d+\)", content))
         if not has_citation:
             risk_factors.append(0.2)
 
-        # 综合评分
         total_risk = min(sum(risk_factors), 1.0)
         return total_risk
 
@@ -250,17 +242,14 @@ class SelfConsistencyChecker:
         if len(self.samples) < 2:
             return True, 1.0
 
-        # 计算所有样本对之间的相似度
         similarities = []
         for i in range(len(self.samples)):
             for j in range(i + 1, len(self.samples)):
                 sim = self._calculate_similarity(self.samples[i], self.samples[j])
                 similarities.append(sim)
 
-        # 平均相似度
         avg_similarity = sum(similarities) / len(similarities) if similarities else 0.0
 
-        # 一致性 = 平均相似度
         is_consistent = avg_similarity >= self.similarity_threshold
 
         return is_consistent, avg_similarity
@@ -313,7 +302,6 @@ class SourceTracer:
             }
         )
 
-        # 索引
         words = content.lower().split()
         for word in words:
             if word not in self.index:
@@ -333,7 +321,6 @@ class SourceTracer:
 
         results = [self.sources[sid] for sid in source_ids]
 
-        # 按相关性排序
         def relevance(source):
             content_lower = source["content"].lower()
             return sum(1 for w in words if w in content_lower)
