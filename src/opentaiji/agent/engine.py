@@ -6,6 +6,7 @@ OpenTaiji Agent Engine - 融合 Hermes Agent + Harness + WFGY
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
+import os
 from enum import Enum
 from typing import Any, Optional
 
@@ -59,11 +60,16 @@ class AgentConfig:
     max_tokens: int = 4096
     max_iterations: int = 25
     wfgy_enabled: bool = True
-    wfgy_threshold: float = 0.7
+    wfgy_threshold: float = 0.5
     self_consistency_samples: int = 3
     stream: bool = True
     workdir: str = "."
     verbose: bool = False
+    # Enhanced features
+    enable_sandbox: bool = True
+    enable_failover: bool = True
+    fallback_providers: list[str] = field(default_factory=list)  # e.g. ["openai", "qwen"]
+    sandbox_config: Optional[dict] = None
 
 
 @dataclass
@@ -105,6 +111,29 @@ class TaijiAgent:
         self.consistency_checker = SelfConsistencyChecker()
         self.memory = SessionMemory()
         self.tools = ToolRegistry()
+
+        # 增强：安全沙箱
+        self.sandbox = None
+        if self.config.enable_sandbox:
+            from opentaiji.security.sandbox import SandboxConfig
+            try:
+                sb_config = SandboxConfig(**self.config.sandbox_config) if self.config.sandbox_config else SandboxConfig()
+            except (TypeError, AttributeError):
+                sb_config = SandboxConfig()
+            self.sandbox = sb_config  # 沙箱配置可供工具使用
+
+        # 增强：Provider 故障转移
+        self.failover_router = None
+        if self.config.enable_failover and self.config.fallback_providers:
+            from opentaiji.providers.failover import ProviderRouter, ProviderEndpoint
+            self.failover_router = ProviderRouter()
+            for fp in self.config.fallback_providers:
+                self.failover_router.add_endpoint(ProviderEndpoint(
+                    name=f"{fp}-fallback",
+                    provider=fp,
+                    model=self.config.model,
+                    priority=2,
+                ))
 
         # 状态
         self.messages: list[Message] = []

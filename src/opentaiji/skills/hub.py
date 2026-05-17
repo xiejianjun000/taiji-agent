@@ -437,6 +437,9 @@ class SkillManager:
         import re
 
         base_id = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        # 处理纯中文等无 ASCII 字符的名称
+        if not base_id:
+            base_id = "custom"
         if base_id in self._skills:
             return f"{base_id}-{len(self._skills)}"
         return base_id

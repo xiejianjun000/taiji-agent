@@ -189,7 +189,7 @@ class HonchoMemory:
         confidence: float = 0.5,
     ) -> str:
         """存储上下文"""
-        context_id = f"context_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        context_id = f"context_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
 
         context = LearnedContext(
             key=context_id,
@@ -315,6 +315,9 @@ class SelfImprovingLoop:
     ) -> dict:
         """从交互中学习"""
         learnings = {}
+
+        # 始终记录交互计数
+        self.honcho.update_peer_card(user_id)
 
         preferences = self.honcho.extract_preferences(conversation)
         if preferences:

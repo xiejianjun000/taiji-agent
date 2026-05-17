@@ -128,3 +128,13 @@ __all__ = [
 
 
 __version__ = "1.0.0"
+
+# Sandbox (v2.1 升级)
+from opentaiji.security.sandbox import (
+    SecuritySandbox,
+    CodeSandbox,
+    SandboxConfig,
+    SandboxResult,
+    default_sandbox,
+    code_sandbox,
+)

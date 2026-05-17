@@ -357,13 +357,23 @@ class ToolRegistry:
         return result.stdout or "No matches found"
 
     async def _shell(self, command: str, timeout: int = 30) -> str:
-        """执行 Shell 命令"""
+        """执行 Shell 命令 — 增强版，使用安全围栏检查"""
+        try:
+            from opentaiji.security.sandbox import default_sandbox as fence
+
+            # 安全围栏检查
+            passed, _ = fence.filter_command(command)
+            if not passed:
+                return f"[安全拦截] 命令被安全围栏阻止: {command}"
+        except ImportError:
+            pass
+
         try:
             result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
             output = result.stdout
             if result.stderr:
                 output += f"\n[stderr]\n{result.stderr}"
-            return output
+            return output or "(empty)"
         except subprocess.TimeoutExpired:
             return f"Command timed out after {timeout}s"
 
@@ -423,41 +433,49 @@ class ToolRegistry:
         return f"Memory saved: {key}"
 
     def _execute_code(self, code: str, language: str = "python") -> str:
-        """执行代码"""
-        import os
-        import tempfile
-
-        suffix_map = {
-            "python": "py",
-            "js": "js",
-            "javascript": "js",
-            "bash": "sh",
-            "shell": "sh",
-        }
-
-        suffix = suffix_map.get(language.lower(), "txt")
-        fd, path = tempfile.mkstemp(suffix=f".{suffix}")
-
+        """执行代码 — 增强版，使用安全沙箱"""
         try:
-            with os.fdopen(fd, "w") as f:
-                f.write(code)
+            from opentaiji.security.sandbox import code_sandbox
 
-            if language.lower() == "python":
-                result = subprocess.run(["python3", path], capture_output=True, text=True, timeout=30)
-            elif language.lower() in ("bash", "shell"):
-                result = subprocess.run(["bash", path], capture_output=True, text=True, timeout=30)
-            else:
-                return f"Unsupported language: {language}"
-
-            output = result.stdout
+            result = code_sandbox.execute_code(code, language)
+            if result.blocked:
+                return f"[安全拦截] {result.block_reason}"
+            if result.status == "error":
+                return f"[错误] {result.stderr}"
             if result.stderr:
-                output += f"\n[stderr]\n{result.stderr}"
+                return result.stdout + f"\n[stderr]\n{result.stderr}"
+            return result.stdout or "(empty)"
+        except ImportError:
+            # 降级方案
+            import os
+            import tempfile
 
-            return output
-        except subprocess.TimeoutExpired:
-            return "Code execution timed out"
-        finally:
-            os.unlink(path)
+            suffix_map = {
+                "python": "py", "js": "js", "javascript": "js",
+                "bash": "sh", "shell": "sh",
+            }
+            suffix = suffix_map.get(language.lower(), "txt")
+            fd, path = tempfile.mkstemp(suffix=f".{suffix}")
+
+            try:
+                with os.fdopen(fd, "w") as f:
+                    f.write(code)
+
+                if language.lower() in ("python", "py"):
+                    result = subprocess.run(["python3", path], capture_output=True, text=True, timeout=30)
+                elif language.lower() in ("bash", "sh", "shell"):
+                    result = subprocess.run(["bash", path], capture_output=True, text=True, timeout=30)
+                else:
+                    return f"Unsupported language: {language}"
+
+                output = result.stdout
+                if result.stderr:
+                    output += f"\n[stderr]\n{result.stderr}"
+                return output
+            except subprocess.TimeoutExpired:
+                return "Code execution timed out"
+            finally:
+                os.unlink(path)
 
     def _todo_list(self) -> str:
         """列出任务"""

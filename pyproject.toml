@@ -1,6 +1,6 @@
 [project]
 name = "opentaiji"
-version = "2.0.0"
+version = "2.1.0"
 description = "OpenTaiji 2.0 - 融合Hermes Agent全部功能的AI智能体框架，基于太极哲学和WFGY防幻觉"
 authors = [{name = "OpenTaiji Team", email = "team@opentaiji.dev"}]
 license = {text = "MIT"}
