@@ -49,3 +49,7 @@ Thumbs.db
 # Project specific
 traces/
 checkpoints/
+
+# Environment (credentials)
+.env
+.env.local

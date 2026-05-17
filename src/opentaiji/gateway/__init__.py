@@ -15,6 +15,7 @@ from opentaiji.gateway.core import (
     WeChatWorkAdapter,
     create_gateway,
 )
+from opentaiji.gateway.feishu import FeishuAdapter as FeishuClient
 
 __all__ = [
     "MessageGateway",
@@ -28,4 +29,5 @@ __all__ = [
     "WeChatWorkAdapter",
     "DingTalkAdapter",
     "FeishuAdapter",
+    "FeishuClient",
 ]

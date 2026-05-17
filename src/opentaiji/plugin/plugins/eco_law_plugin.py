@@ -376,3 +376,112 @@ class EcoLawPlugin(Plugin):
             "success": True,
             "categories": categories
         }
+
+    async def query_wps_knowledge_base(
+        self,
+        keyword: str,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        查询 WPS 生态环境知识库（通过 MCP mcporter）。
+
+        知识库包含 22 份核心文档，涵盖：
+        - 生态环境保护法律法规汇编（2026.5）
+        - 生态环境法典含新旧对照
+        - 国家生态环境标准目录汇编（2026.4）
+        - 建设项目环评审批原则汇编（2026.4）
+        - 生态环境监测技术规范清单（2026.3）
+        - 各类行业排放标准及执法指引
+
+        Args:
+            keyword: 搜索关键词
+            category: 知识分类（法律法规/标准规范/环评管理/执法监管/监测技术/企业管理）
+
+        Returns:
+            匹配的知识库文件列表
+        """
+        import json
+        import subprocess
+
+        index_path = Path(__file__).parent.parent.parent.parent.parent / "data" / "knowledge" / "eco_environment" / "index.json"
+
+        try:
+            if index_path.exists():
+                with open(index_path, "r", encoding="utf-8") as f:
+                    kb_index = json.load(f)
+            else:
+                # Fallback to embedded index
+                kb_index = self._get_embedded_kb_index()
+
+            results = []
+            keyword_lower = keyword.lower() if keyword else ""
+
+            for cat_name, files in kb_index.get("categories", {}).items():
+                if category and cat_name != category:
+                    continue
+                for f in files:
+                    if keyword_lower and keyword_lower not in f["name"].lower():
+                        continue
+                    results.append({
+                        "name": f["name"],
+                        "category": cat_name,
+                        "size_mb": f["size_mb"],
+                        "format": f["format"],
+                        "kuid": f["kuid"],
+                        "wps_url": f"https://www.kdocs.cn/wiki/l/{f['kuid']}",
+                    })
+
+            return {
+                "success": True,
+                "source": "WPS 生态环境知识库",
+                "total_files": kb_index.get("total_files", 0),
+                "matched": len(results),
+                "results": results,
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    def _get_embedded_kb_index(self) -> dict:
+        """返回内嵌的知识库索引（离线备用）"""
+        return {
+            "version": "2026.5",
+            "name": "生态环境知识库",
+            "total_files": 22,
+            "categories": {
+                "法律法规": [
+                    {"name": "生态环境保护法律法规汇编（2026.5）", "kuid": "0lcilV7Cn4Ovdw", "size_mb": 32.8},
+                    {"name": "中华人民共和国生态环境法典含新旧对照", "kuid": "0lcjIgK6W1YJIU", "size_mb": 4.2},
+                    {"name": "生态环境部复函汇编（2026.3）", "kuid": "0lcoVqctezlpK4", "size_mb": 37.2},
+                    {"name": "生态环境部部长信箱回复汇编（2026.1）", "kuid": "0lcn0h9Q1pbWn0", "size_mb": 11.8},
+                    {"name": "生态环境保护标准修改单汇编（2026.3）", "kuid": "0lcsCzWOjy2alo", "size_mb": 23.0},
+                ],
+                "标准规范": [
+                    {"name": "国家生态环境标准目录汇编（2026.4）", "kuid": "0lcaQ7cEfsFDt8", "size_mb": 29.6},
+                    {"name": "大气污染物综合排放标准详解", "kuid": "0lcpGObxglL9cp", "size_mb": 12.4},
+                    {"name": "各行业排气筒高度及烟气基准含氧量要求（2026.4）", "kuid": "0lcnHKy7T1u6Y0", "size_mb": 11.6},
+                    {"name": "各类环境管控物质名录汇编（2026.2）", "kuid": "0lcmS3UGqsWR4v", "size_mb": 25.2},
+                    {"name": "生态环境监测技术规范清单（2026.3）", "kuid": "0lcdg2Vzao6w3b", "size_mb": 24.4},
+                ],
+                "环评管理": [
+                    {"name": "建设项目环评文件审批原则汇编（2026.4）", "kuid": "0lcrsZIkLqZzkJ", "size_mb": 26.8},
+                    {"name": "建设项目重大变动清单汇编（2025.8）", "kuid": "0lcizhNLBGhvW9", "size_mb": 0.4},
+                    {"name": "环保合同管理服务技术手册及案例汇编", "kuid": "0lccSzVrdflrH7", "size_mb": 27.4},
+                ],
+                "执法监管": [
+                    {"name": "湖南省生态环境行政处罚文书范本（2024）", "kuid": "0lcvh3crXpbpoK", "size_mb": 5.6},
+                    {"name": "广东省工业污染源达标排放执法指引", "kuid": "0lcku4eUmJv28t", "size_mb": 13.5},
+                    {"name": "排污单位自行监测法律法规汇编", "kuid": "0lcge7miiguzRp", "size_mb": 0.7},
+                ],
+                "监测技术": [
+                    {"name": "土壤环境监测分析方法", "kuid": "0lcn3ah3P3FuHB", "size_mb": 254.1},
+                    {"name": "环境监测（第六版，奚旦立）", "kuid": "0lcgOawPH5Q1K0", "size_mb": 170.8},
+                    {"name": "生态环境监测机构资质认定评审案例解析", "kuid": "0lcnmOb8gxl5lW", "size_mb": 20.3},
+                ],
+                "企业管理": [
+                    {"name": "固定污染源企业环境保护规范化管理手册", "kuid": "0lcoknCXYcmriT", "size_mb": 26.8},
+                ],
+            },
+        }

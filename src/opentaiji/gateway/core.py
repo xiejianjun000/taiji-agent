@@ -6,6 +6,7 @@
 import asyncio
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -355,64 +356,21 @@ class DingTalkAdapter(PlatformAdapter):
                 return False
 
 
-class FeishuAdapter(PlatformAdapter):
-    """飞书适配器"""
+class FeishuAdapter:
+    """
+    飞书适配器（向后兼容代理）。
 
-    def __init__(self, config: dict):
-        super().__init__(config)
-        self.app_id = config.get("app_id")
-        self.app_secret = config.get("app_secret")
-        self._tenant_access_token = None
+    实际实现在 opentaiji.gateway.feishu 模块中。
+    通过此类保留 API 兼容性，同时支持完整的 WS 事件订阅。
+    """
 
-    async def start(self):
-        """启动飞书 Bot"""
-        await self._get_token()
-        logger.info("Feishu bot started")
+    def __new__(cls, config: dict):
+        from opentaiji.gateway.feishu import FeishuAdapter as NewFeishuAdapter
 
-    async def stop(self):
-        """停止飞书 Bot"""
-        logger.info("Feishu bot stopped")
-
-    async def _get_token(self):
-        """获取访问令牌"""
-        import httpx
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
-                json={
-                    "app_id": self.app_id,
-                    "app_secret": self.app_secret,
-                },
-            )
-            data = response.json()
-            if data.get("tenant_access_token"):
-                self._tenant_access_token = data["tenant_access_token"]
-
-    async def send_message(self, message: OutgoingMessage) -> bool:
-        """发送消息"""
-        import httpx
-
-        if not self._tenant_access_token:
-            await self._get_token()
-
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    "https://open.feishu.cn/open-apis/im/v1/messages",
-                    headers={"Authorization": f"Bearer {self._tenant_access_token or ''}"},
-                    params={"receive_id_type": "chat_id"},
-                    json={
-                        "receive_id": message.chat_id,
-                        "msg_type": "text",
-                        "content": json.dumps({"text": message.content}),
-                    },
-                )
-                response_json = response.json()
-                return bool(response_json.get("code") == 0) if isinstance(response_json, dict) else False
-            except Exception as e:
-                logger.error(f"Feishu send error: {e}")
-                return False
+        instance = NewFeishuAdapter.__new__(NewFeishuAdapter)
+        PlatformAdapter.__init__(instance, config)
+        NewFeishuAdapter.__init__(instance, config)
+        return instance
 
 
 class MessageGateway:
@@ -481,7 +439,7 @@ class MessageGateway:
 
 
 def create_gateway(config: dict) -> MessageGateway:
-    """创建消息网关"""
+    """创建消息网关。支持从环境变量自动读取飞书配置。"""
     gateway = MessageGateway()
 
     if "telegram" in config:
@@ -496,7 +454,21 @@ def create_gateway(config: dict) -> MessageGateway:
     if "dingtalk" in config:
         gateway.register("dingtalk", DingTalkAdapter(config["dingtalk"]))
 
+    # 飞书：优先使用显式配置，其次从环境变量读取
     if "feishu" in config:
         gateway.register("feishu", FeishuAdapter(config["feishu"]))
+    else:
+        _feishu_app_id = os.environ.get("FEISHU_APP_ID", "")
+        _feishu_app_secret = os.environ.get("FEISHU_APP_SECRET", "")
+        if _feishu_app_id and _feishu_app_secret:
+            from opentaiji.gateway.feishu import FeishuAdapter as FSAdapter
+
+            fs_config = {
+                "app_id": _feishu_app_id,
+                "app_secret": _feishu_app_secret,
+                "verification_token": os.environ.get("FEISHU_VERIFICATION_TOKEN", ""),
+                "encrypt_key": os.environ.get("FEISHU_ENCRYPT_KEY", ""),
+            }
+            gateway.register("feishu", FSAdapter(fs_config))
 
     return gateway

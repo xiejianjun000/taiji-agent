@@ -109,6 +109,22 @@ from opentaiji.visual import (
     MermaidExporter,
     WorkflowExporter,
 )
+from opentaiji.taiji_verify import (
+    DeltaSCalculator,
+    DeltaSResult,
+    FailureMode,
+    FailureModeDetector,
+    FailureSeverity,
+    FuReturn,
+    GateZone,
+    KunGuard,
+    PolarisCompiler,
+    QianAdvance,
+    TaijiVerifyEngine,
+    VerificationRequest,
+    VerificationResponse,
+    XunTune,
+)
 from opentaiji.wfgy import HallucinationDetector, WFGYVerifier
 from opentaiji.workflow import (
     ConditionalEdge,
@@ -121,12 +137,27 @@ from opentaiji.workflow import (
     WorkflowState,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 __all__ = [
     # Core
     "TaijiAgent",
     "AgentConfig",
+    # Taiji Verify (太极验证引擎)
+    "TaijiVerifyEngine",
+    "VerificationRequest",
+    "VerificationResponse",
+    "DeltaSCalculator",
+    "DeltaSResult",
+    "GateZone",
+    "KunGuard",
+    "QianAdvance",
+    "FuReturn",
+    "XunTune",
+    "PolarisCompiler",
+    "FailureModeDetector",
+    "FailureMode",
+    "FailureSeverity",
     # WFGY
     "WFGYVerifier",
     "HallucinationDetector",

@@ -61,6 +61,8 @@ class AgentConfig:
     max_iterations: int = 25
     wfgy_enabled: bool = True
     wfgy_threshold: float = 0.5
+    taiji_verify_enabled: bool = False  # 太极验证引擎（升级版WFGY）
+    taiji_verify_block_on_danger: bool = True  # DANGER区域自动拦截
     self_consistency_samples: int = 3
     stream: bool = True
     workdir: str = "."
@@ -109,6 +111,16 @@ class TaijiAgent:
         self.wfgy = WFGYVerifier()
         self.hallucination_detector = HallucinationDetector()
         self.consistency_checker = SelfConsistencyChecker()
+
+        # 增强：太极验证引擎（升级版WFGY）
+        self.taiji_verify = None
+        if self.config.taiji_verify_enabled:
+            from opentaiji.taiji_verify.engine import TaijiVerifyEngine, VerificationRequest
+            self.taiji_verify = TaijiVerifyEngine(
+                embedding_dim=768,
+                enable_failure_modes=True,
+                enable_stability_check=True,
+            )
         self.memory = SessionMemory()
         self.tools = ToolRegistry()
 
@@ -421,10 +433,15 @@ class TaijiAgent:
         return [msg.model_dump() for msg in self.messages]
 
     async def _verify_and_annotate(self, response) -> Any:
-        """WFGY 验证并注解"""
+        """WFGY 验证并注解（可选升级为太极验证引擎）"""
         if not response.content:
             return response
 
+        # 优先使用太极验证引擎（如果启用）
+        if self.taiji_verify:
+            return self._taiji_verify_response(response)
+
+        # 回退到基础WFGY验证
         # 1. 符号层验证
         wfgy_passed = self.wfgy.verify(response.content)
 
@@ -438,6 +455,55 @@ class TaijiAgent:
             response.content += warning
 
         return response
+
+    def _taiji_verify_response(self, response) -> Any:
+        """使用太极验证引擎进行完整流水线验证"""
+        from opentaiji.taiji_verify.engine import VerificationRequest, Verdict
+
+        req = VerificationRequest(
+            input_text=response.content,
+            ground_truth=self._get_last_user_query() or response.content,
+        )
+        result = self.taiji_verify.verify(req)
+
+        # 记录验证结果到事件总线
+        self.event_bus.emit_sync("taiji:verify:result", {
+            "verdict": result.verdict.value,
+            "delta_s": result.delta_s_result.delta_s if result.delta_s_result else None,
+            "failures": result.failure_count,
+            "processing_ms": result.processing_time_ms,
+        })
+
+        if result.verdict == Verdict.BLOCK:
+            if self.config.taiji_verify_block_on_danger:
+                response.content = (
+                    f"[🚫 太极验证引擎拦截] 检测到严重问题:\n"
+                    + "\n".join(f"  - {d.mode.name_cn}: {d.details}"
+                              for d in result.failure_detections[:3])
+                    + f"\n\nΔS={result.delta_s_result.delta_s:.3f}"
+                      f" (zone={result.delta_s_result.zone.value})"
+                      if result.delta_s_result else ""
+                )
+            return response
+
+        if result.verdict in (Verdict.CONDITIONAL_PASS, Verdict.CORRECTED):
+            zone = "🟡"
+            if result.delta_s_result:
+                zone_map = {"safe": "🟢", "transit": "🟡", "risk": "🟠", "danger": "🔴"}
+                zone = zone_map.get(result.delta_s_result.zone.value, "🟡")
+            note = f"\n\n[{zone} 太极验证: {result.verdict.value}]"
+            if result.failure_detections:
+                note += f" ({len(result.failure_detections)}个注意项)"
+            response.content += note
+
+        return response
+
+    def _get_last_user_query(self) -> str:
+        """获取最后一条用户消息"""
+        for msg in reversed(self.messages):
+            if hasattr(msg, 'role') and msg.role == "user":
+                return getattr(msg, 'content', '') or ''
+        return ""
 
     def get_event_bus(self) -> EventBus:
         """获取事件总线"""
