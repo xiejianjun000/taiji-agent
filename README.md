@@ -59,7 +59,7 @@ Sandbox 安全沙箱                  Skills Hub 技能市场
 基于 Harness 的通用 LLM Agent 运行时，~350 行核心代码：
 
 ```python
-from opentaiji import TaijiAgent, AgentConfig
+from taiji_agent import TaijiAgent, AgentConfig
 
 agent = TaijiAgent(config=AgentConfig(
     provider="anthropic",
@@ -134,7 +134,7 @@ layers:
 从每次交互中学习，持续进化：
 
 ```python
-from opentaiji import SelfImprovingLoop, HonchoMemory, SkillManager, WFGYVerifier
+from taiji_agent import SelfImprovingLoop, HonchoMemory, SkillManager, WFGYVerifier
 
 loop = SelfImprovingLoop(
     honcho=HonchoMemory(),
@@ -283,17 +283,17 @@ source .venv/bin/activate
 pip install -e ".[all]"
 
 # 初始化工作环境
-opentaiji init
+taiji_agent init
 ```
 
 ### 首次对话
 
 ```bash
 # 进入交互式对话模式
-opentaiji
+taiji_agent
 
 # 或者单次执行
-opentaiji "帮我分析这段代码的性能"
+taiji_agent "帮我分析这段代码的性能"
 ```
 
 启动后将看到：
@@ -320,7 +320,7 @@ opentaiji "帮我分析这段代码的性能"
 ### Python API
 
 ```python
-from opentaiji import TaijiAgent, AgentConfig
+from taiji_agent import TaijiAgent, AgentConfig
 import asyncio
 
 async def main():
@@ -380,7 +380,7 @@ export OPENAIJI_WFGY="true"
 
 ```
 open-taiji/
-├── src/opentaiji/           # 100 个源文件, 28,009 行
+├── src/taiji_agent/           # 100 个源文件, 28,009 行
 │   ├── agent/               # Agent Loop 核心引擎
 │   │   └── engine.py        #   TaijiAgent, AgentConfig, TaskResult
 │   ├── wfgy/                # WFGY 防幻觉系统
@@ -450,58 +450,58 @@ open-taiji/
 
 ```python
 # Agent 引擎
-from opentaiji import TaijiAgent, AgentConfig, TaskResult, TaskStatus
+from taiji_agent import TaijiAgent, AgentConfig, TaskResult, TaskStatus
 
 # WFGY 防幻觉
-from opentaiji import WFGYVerifier, HallucinationDetector, SelfConsistencyChecker
+from taiji_agent import WFGYVerifier, HallucinationDetector, SelfConsistencyChecker
 
 # 太极验证
-from opentaiji.taiji_verify import TaijiVerifyEngine
+from taiji_agent.taiji_verify import TaijiVerifyEngine
 
 # Soul 人格
-from opentaiji import SoulLoader, Soul, inject_soul
+from taiji_agent import SoulLoader, Soul, inject_soul
 
 # 记忆系统
-from opentaiji import SessionMemory
-from opentaiji import HonchoMemory, PeerCard, LearnedContext, SelfImprovingLoop
+from taiji_agent import SessionMemory
+from taiji_agent import HonchoMemory, PeerCard, LearnedContext, SelfImprovingLoop
 
 # 技能系统
-from opentaiji import SkillManager, SkillMarket, SkillCreator, Skill
+from taiji_agent import SkillManager, SkillMarket, SkillCreator, Skill
 
 # 工具系统
-from opentaiji import ToolRegistry, Tool, ToolResult, ToolSchema
+from taiji_agent import ToolRegistry, Tool, ToolResult, ToolSchema
 
 # Provider
-from opentaiji import (
+from taiji_agent import (
     AnthropicProvider, OpenAIProvider,
     QwenProvider, GLMProvider, KimiProvider, DoubaoProvider,
 )
-from opentaiji.providers.failover import ProviderRouter, ProviderEndpoint, FailoverConfig
+from taiji_agent.providers.failover import ProviderRouter, ProviderEndpoint, FailoverConfig
 
 # 安全系统
-from opentaiji.security.sandbox import (
+from taiji_agent.security.sandbox import (
     Sandbox, SandboxConfig, SandboxPool, SecurityFence,
     SandboxStatus, SandboxResult,
 )
 
 # CLI
-from opentaiji.cli.main import InteractiveAgent, SessionStore
+from taiji_agent.cli.main import InteractiveAgent, SessionStore
 
 # 事件总线
-from opentaiji.events.bus import EventBus
+from taiji_agent.events.bus import EventBus
 
 # 插件系统
-from opentaiji.plugin import ConfigurablePlugin, PluginHealth, PluginState
+from taiji_agent.plugin import ConfigurablePlugin, PluginHealth, PluginState
 
 # v2 特性
-from opentaiji.mcp import MCPServerAdapter, MCPClientAdapter, MCPProtocol
-from opentaiji.guardrails import GuardrailManager, ContentFilter, QualityGate
-from opentaiji.observability import TracingManager, ConsoleExporter
-from opentaiji.hitl import ApprovalQueue, ConfidenceGate, CheckpointManager
-from opentaiji.workflow import WorkflowEngine, WorkflowGraph
-from opentaiji.handoffs import HandoffManager, AgentRegistry
-from opentaiji.code import CodeExecutor, SandboxConfig, ExecutionStatus
-from opentaiji.visual import MermaidExporter, WorkflowGraph, ExportFormat
+from taiji_agent.mcp import MCPServerAdapter, MCPClientAdapter, MCPProtocol
+from taiji_agent.guardrails import GuardrailManager, ContentFilter, QualityGate
+from taiji_agent.observability import TracingManager, ConsoleExporter
+from taiji_agent.hitl import ApprovalQueue, ConfidenceGate, CheckpointManager
+from taiji_agent.workflow import WorkflowEngine, WorkflowGraph
+from taiji_agent.handoffs import HandoffManager, AgentRegistry
+from taiji_agent.code import CodeExecutor, SandboxConfig, ExecutionStatus
+from taiji_agent.visual import MermaidExporter, WorkflowGraph, ExportFormat
 ```
 
 ---
@@ -637,7 +637,7 @@ A: 可以。MIT 许可证，无限制。
 ```bash
 git pull origin main
 pip install -e ".[all]"
-opentaiji init
+taiji_agent init
 ```
 
 ---
