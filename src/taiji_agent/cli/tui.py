@@ -461,27 +461,33 @@ class TaijiTUI(App):
 
                 # ════════════════════════════════════
                 # 🆕 TaijiVerifyPro 防幻觉结果特殊渲染
+                # （带异常保护，确保不影响正常显示）
                 # ════════════════════════════════════
-                if "🚫 [TaijiVerifyPro 拦截]" in s or "[TaijiVerifyPro 拦截]" in s:
-                    if current_text_line:
-                        chat.write(Text(current_text_line, style="white"))
-                        current_text_line = ""
-                    self._render_block_alert(chat, s, status)
-                    continue
+                try:
+                    if "🚫 [TaijiVerifyPro 拦截]" in s or "[TaijiVerifyPro 拦截]" in s:
+                        if current_text_line:
+                            chat.write(Text(current_text_line, style="white"))
+                            current_text_line = ""
+                        self._render_block_alert(chat, s, status)
+                        continue
 
-                if "⚠️ [TaijiVerifyPro 警告]" in s or "[TaijiVerifyPro 警告]" in s:
-                    if current_text_line:
-                        chat.write(Text(current_text_line, style="white"))
-                        current_text_line = ""
-                    self._render_warning_alert(chat, s, status)
-                    continue
+                    if "⚠️ [TaijiVerifyPro 警告]" in s or "[TaijiVerifyPro 警告]" in s:
+                        if current_text_line:
+                            chat.write(Text(current_text_line, style="white"))
+                            current_text_line = ""
+                        self._render_warning_alert(chat, s, status)
+                        continue
 
-                if "[TaijiVerifyPro]" in s and "风险评估" in s:
-                    if current_text_line:
-                        chat.write(Text(current_text_line, style="white"))
-                        current_text_line = ""
-                    chat.write(Text(f"  {s}", style="cyan"))
-                    status.update_verify_status("MEDIUM_RISK")
+                    if "[TaijiVerifyPro]" in s and "风险评估" in s:
+                        if current_text_line:
+                            chat.write(Text(current_text_line, style="white"))
+                            current_text_line = ""
+                        chat.write(Text(f"  {s}", style="cyan"))
+                        status.update_verify_status("MEDIUM_RISK")
+                        continue
+                except Exception as render_err:
+                    # 🛡️ 安全回退：如果渲染失败，显示原始文本
+                    chat.write(Text(f"  {s}", style="yellow"))
                     continue
 
                 # 累积文本（流式输出逐段累积）
@@ -516,104 +522,116 @@ class TaijiTUI(App):
 
     def _render_block_alert(self, chat, alert_text: str, status):
         """渲染 BLOCK 拦截警报（红色醒目样式）"""
-        import re
+        try:
+            import re
 
-        status.update_verify_status("BLOCK")
+            status.update_verify_status("BLOCK")
 
-        # 提取关键信息
-        risk_match = re.search(r'风险评分:\s*([\d.]+)%', alert_text)
-        risk_score = float(risk_match.group(1)) / 100 if risk_match else 0.9
-        time_match = re.search(r'检测耗时:\s*(\d+)ms', alert_text)
-        detect_time = time_match.group(1) if time_match else "?"
+            # 提取关键信息
+            risk_match = re.search(r'风险评分:\s*([\d.]+)%', alert_text)
+            risk_score = float(risk_match.group(1)) / 100 if risk_match else 0.9
+            time_match = re.search(r'检测耗时:\s*(\d+)ms', alert_text)
+            detect_time = time_match.group(1) if time_match else "?"
 
-        # 渲染醒目的拦截框
-        chat.write("")
-        chat.write(Text(
-            f"  {'╔' + '═'*58 + '╗'}",
-            style="bold red"
-        ))
-        chat.write(Text(
-            f"  ║  🚫 [TaijiVerifyPro] 内容已被拦截  ".ljust(59) + "║",
-            style="bold reverse red"
-        ))
-        chat.write(Text(
-            f"  {'╠' + '═'*58 + '╣'}",
-            style="red"
-        ))
-
-        # 风险评分进度条（可视化）
-        bar_width = 40
-        filled = int(bar_width * risk_score)
-        bar = "█" * filled + "░" * (bar_width - filled)
-        chat.write(Text(
-            f"  ║  ⚠️  风险评分: [{bar}] {risk_score:.0%}".ljust(59) + "║",
-            style="yellow"
-        ))
-
-        # 高风险维度（提取前2个）
-        dim_matches = re.findall(r'🔴 (.*?):\s*([\d.]+)%', alert_text)
-        if dim_matches:
-            for dim_name, dim_score in dim_matches[:2]:
-                chat.write(Text(
-                    f"  ║     🔴 {dim_name}: {float(dim_score)/100:.0%}".ljust(59) + "║",
-                    style="red"
-                ))
-
-        # 改进建议（提取第1个）
-        rec_match = re.search(r'→\s*(.+)', alert_text)
-        if rec_match:
-            suggestion = rec_match.group(1)[:50]
+            # 渲染醒目的拦截框
+            chat.write("")
             chat.write(Text(
-                f"  ║     💡 {suggestion}".ljust(59) + "║",
-                style="dim"
+                f"  {'╔' + '═'*58 + '╗'}",
+                style="bold red"
+            ))
+            chat.write(Text(
+                f"  ║  🚫 [TaijiVerifyPro] 内容已被拦截  ".ljust(59) + "║",
+                style="bold reverse red"
+            ))
+            chat.write(Text(
+                f"  {'╠' + '═'*58 + '╣'}",
+                style="red"
             ))
 
-        chat.write(Text(
-            f"  ║  ⏱️  检测耗时: {detect_time}ms".ljust(59) + "║",
-            style="dim"
-        ))
-        chat.write(Text(
-            f"  {'╚' + '═'*58 + '╝'}",
-            style="bold red"
-        ))
-        chat.write("")
+            # 风险评分进度条（可视化）
+            bar_width = 40
+            filled = int(bar_width * risk_score)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            chat.write(Text(
+                f"  ║  ⚠️  风险评分: [{bar}] {risk_score:.0%}".ljust(59) + "║",
+                style="yellow"
+            ))
+
+            # 高风险维度（提取前2个）
+            dim_matches = re.findall(r'🔴 (.*?):\s*([\d.]+)%', alert_text)
+            if dim_matches:
+                for dim_name, dim_score in dim_matches[:2]:
+                    chat.write(Text(
+                        f"  ║     🔴 {dim_name}: {float(dim_score)/100:.0%}".ljust(59) + "║",
+                        style="red"
+                    ))
+
+            # 改进建议（提取第1个）
+            rec_match = re.search(r'→\s*(.+)', alert_text)
+            if rec_match:
+                suggestion = rec_match.group(1)[:50]
+                chat.write(Text(
+                    f"  ║     💡 {suggestion}".ljust(59) + "║",
+                    style="dim"
+                ))
+
+            chat.write(Text(
+                f"  ║  ⏱️  检测耗时: {detect_time}ms".ljust(59) + "║",
+                style="dim"
+            ))
+            chat.write(Text(
+                f"  {'╚' + '═'*58 + '╝'}",
+                style="bold red"
+            ))
+            chat.write("")
+
+        except Exception as e:
+            # 🛡️ 安全回退：如果复杂渲染失败，显示简化版本
+            chat.write(Text(f"\n  🚫 [TaijiVerifyPro 拦截] {alert_text[:100]}...", style="bold red"))
+            chat.write("")
 
     def _render_warning_alert(self, chat, warning_text: str, status):
         """渲染 WARNING 警告（黄色醒目样式）"""
-        import re
+        try:
+            import re
 
-        status.update_verify_status("HIGH_RISK")
+            status.update_verify_status("HIGH_RISK")
 
-        # 提取风险评分
-        risk_match = re.search(r'([\d.]+)%', warning_text)
-        risk_score = float(risk_match.group(1)) / 100 if risk_match else 0.7
+            # 提取风险评分
+            risk_match = re.search(r'([\d.]+)%', warning_text)
+            risk_score = float(risk_match.group(1)) / 100 if risk_match else 0.7
 
-        # 提取建议
-        suggest_match = re.search(r'建议:\s*(.+)', warning_text)
-        suggestion = suggest_match.group(1)[:60] if suggest_match else ""
+            # 提取建议
+            suggest_match = re.search(r'建议:\s*(.+)', warning_text)
+            suggestion = suggest_match.group(1)[:60] if suggest_match else ""
 
-        # 渲染警告框（紧凑版）
-        chat.write("")
-        chat.write(Text(
-            f"  ┌────────────────────────────────────────────────────┐",
-            style="yellow"
-        ))
-        chat.write(Text(
-            f"  │  ⚠️ [TaijiVerifyPro] 幻觉风险较高: {risk_score:.0%}"
-            f"{' '*(38 - len(f'{risk_score:.0%}'))}│",
-            style="bold yellow"
-        ))
-        if suggestion:
+            # 渲染警告框（紧凑版）
+            chat.write("")
             chat.write(Text(
-                f"  │     💡 {suggestion}"
-                f"{' '*(45 - min(len(suggestion), 45))}│",
-                style="dim"
+                f"  ┌────────────────────────────────────────────────────┐",
+                style="yellow"
             ))
-        chat.write(Text(
-            f"  └────────────────────────────────────────────────────┘",
-            style="yellow"
-        ))
-        chat.write("")
+            chat.write(Text(
+                f"  │  ⚠️ [TaijiVerifyPro] 幻觉风险较高: {risk_score:.0%}"
+                f"{' '*(38 - len(f'{risk_score:.0%}'))}│",
+                style="bold yellow"
+            ))
+            if suggestion:
+                chat.write(Text(
+                    f"  │     💡 {suggestion}"
+                    f"{' '*(45 - min(len(suggestion), 45))}│",
+                    style="dim"
+                ))
+            chat.write(Text(
+                f"  └────────────────────────────────────────────────────┘",
+                style="yellow"
+            ))
+            chat.write("")
+
+        except Exception as e:
+            # 🛡️ 安全回退：如果渲染失败，显示简化版本
+            chat.write(Text(f"\n  ⚠️ [TaijiVerifyPro 警告] {warning_text[:100]}...", style="bold yellow"))
+            chat.write("")
 
     # ══════════════════════════════════════════════════════════
     # 命令处理（/dream 等）
